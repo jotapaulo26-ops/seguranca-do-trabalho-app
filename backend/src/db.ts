@@ -122,6 +122,81 @@ export interface AuditLog {
   created_at: string;
 }
 
+export interface ExtinguisherInspection {
+  id: string;
+  date: string;
+  inspectorName: string;
+  pressureOk: boolean;
+  sealIntact: boolean;
+  hoseClear: boolean;
+  signVisible: boolean;
+  unobstructed: boolean;
+  notes?: string;
+  status: 'aprovado' | 'reprovado';
+}
+
+export interface Extinguisher {
+  id: string;
+  code: string;
+  type: 'AGUA' | 'PQS_ABC' | 'PQS_BC' | 'CO2' | 'ESPUMA';
+  capacity: string;
+  location_name: string;
+  lat: number;
+  lng: number;
+  selo_inmetro: string;
+  last_recharge_date: string;
+  next_recharge_date: string;
+  hydrostatic_test_date: string;
+  status: 'operacional' | 'em_manutencao' | 'descarregado' | 'vencido';
+  qr_code_data: string;
+  inspections: ExtinguisherInspection[];
+  created_at: string;
+}
+
+export interface BrigadeMember {
+  id: string;
+  employee_id: string;
+  role_in_brigade: 'lider' | 'vice_lider' | 'chefe_setor' | 'brigadista_combate' | 'socorrista';
+  shift: string;
+  station_location: string;
+  lat?: number;
+  lng?: number;
+  training_cert_code?: string;
+  training_date: string;
+  training_expiry_date: string;
+  is_on_duty: boolean;
+  notes?: string;
+  created_at: string;
+}
+
+export interface MeetingPoint {
+  id: string;
+  code: string;
+  name: string;
+  lat: number;
+  lng: number;
+  capacity_people: number;
+  evacuated_sectors: string[];
+  coordinator_employee_id?: string;
+  description: string;
+  photo_url?: string;
+  created_at: string;
+}
+
+export interface EvacuationDrill {
+  id: string;
+  title: string;
+  date: string;
+  evacuation_time_seconds: number;
+  total_evacuated_people: number;
+  meeting_point_id: string;
+  drill_type: 'simulado_geral' | 'simulado_parcial' | 'emergencia_real';
+  evaluation: 'excelente' | 'bom' | 'regular' | 'insatisfatorio';
+  observations: string;
+  responsible_name: string;
+  created_at: string;
+}
+
 export interface DatabaseSchema {
   roles: Role[];
   users: User[];
@@ -131,6 +206,10 @@ export interface DatabaseSchema {
   risk_locations: RiskLocation[];
   documents: DocumentRecord[];
   audit_logs: AuditLog[];
+  extinguishers: Extinguisher[];
+  brigade_members: BrigadeMember[];
+  meeting_points: MeetingPoint[];
+  evacuation_drills: EvacuationDrill[];
   settings: Record<string, string>;
 }
 
@@ -141,7 +220,28 @@ function loadDatabase(): DatabaseSchema {
   if (fs.existsSync(dbFilePath)) {
     try {
       const raw = fs.readFileSync(dbFilePath, 'utf-8');
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      return {
+        roles: parsed.roles || [],
+        users: parsed.users || [],
+        employees: parsed.employees || [],
+        trainings: parsed.trainings || [],
+        epis: parsed.epis || [],
+        risk_locations: parsed.risk_locations || [],
+        documents: parsed.documents || [],
+        audit_logs: parsed.audit_logs || [],
+        extinguishers: parsed.extinguishers || [],
+        brigade_members: parsed.brigade_members || [],
+        meeting_points: parsed.meeting_points || [],
+        evacuation_drills: parsed.evacuation_drills || [],
+        settings: parsed.settings || {
+          companyName: 'Indústria & Usina Açucareira Novo Horizonte S.A.',
+          companyCnpj: '12.345.678/0001-90',
+          companyAddress: 'Rodovia SP-321, Km 42 - Distrito Industrial, Novo Horizonte - SP',
+          safetyManager: 'Carlos Mendes - Reg. MTE 004128/SP',
+          googleMapsApiKey: ''
+        }
+      };
     } catch (err) {
       console.error('Erro ao ler db.json, recriando...', err);
     }
@@ -157,6 +257,10 @@ function loadDatabase(): DatabaseSchema {
     risk_locations: [],
     documents: [],
     audit_logs: [],
+    extinguishers: [],
+    brigade_members: [],
+    meeting_points: [],
+    evacuation_drills: [],
     settings: {
       companyName: 'Indústria & Usina Açucareira Novo Horizonte S.A.',
       companyCnpj: '12.345.678/0001-90',
@@ -188,6 +292,7 @@ export function initDatabase(): void {
       employees: ['view', 'create', 'edit', 'delete'],
       map: ['view', 'create', 'edit', 'delete'],
       documents: ['view', 'create', 'edit', 'delete', 'sign', 'approve'],
+      brigada: ['view', 'create', 'edit', 'delete', 'inspect'],
       users: ['view', 'manage'],
       roles: ['view', 'manage'],
       audit: ['view'],
@@ -199,6 +304,7 @@ export function initDatabase(): void {
       employees: ['view', 'create', 'edit'],
       map: ['view', 'create', 'edit'],
       documents: ['view', 'create', 'edit', 'delete', 'sign', 'approve'],
+      brigada: ['view', 'create', 'edit', 'inspect'],
       users: ['view'],
       roles: ['view'],
       audit: ['view'],
@@ -579,6 +685,221 @@ export function initDatabase(): void {
     });
   }
 
+  // 6. Extinguishers Seed
+  if (!memoryDb.extinguishers || memoryDb.extinguishers.length === 0) {
+    memoryDb.extinguishers = [
+      {
+        id: 'ext_01',
+        code: 'EXT-01',
+        type: 'PQS_ABC',
+        capacity: '6 kg',
+        location_name: 'Almoxarifado Central - Pilar A3 (Novo Horizonte)',
+        lat: -21.4688,
+        lng: -49.2215,
+        selo_inmetro: 'INMETRO-781923',
+        last_recharge_date: '2026-03-10',
+        next_recharge_date: '2027-03-10',
+        hydrostatic_test_date: '2029-03-10',
+        status: 'operacional',
+        qr_code_data: 'EXT-01-PQS-6KG',
+        inspections: [
+          {
+            id: 'insp_ext_01',
+            date: '2026-10-15',
+            inspectorName: 'Carlos Mendes (Técnico SST)',
+            pressureOk: true,
+            sealIntact: true,
+            hoseClear: true,
+            signVisible: true,
+            unobstructed: true,
+            notes: 'Extintor em perfeitas condições operacionais.',
+            status: 'aprovado'
+          }
+        ],
+        created_at: new Date().toISOString()
+      },
+      {
+        id: 'ext_02',
+        code: 'EXT-02',
+        type: 'CO2',
+        capacity: '6 kg',
+        location_name: 'Subestação Elétrica Principal (Novo Horizonte)',
+        lat: -21.4695,
+        lng: -49.2210,
+        selo_inmetro: 'INMETRO-665201',
+        last_recharge_date: '2026-01-20',
+        next_recharge_date: '2027-01-20',
+        hydrostatic_test_date: '2028-01-20',
+        status: 'operacional',
+        qr_code_data: 'EXT-02-CO2-6KG',
+        inspections: [
+          {
+            id: 'insp_ext_02',
+            date: '2026-10-15',
+            inspectorName: 'Carlos Mendes (Técnico SST)',
+            pressureOk: true,
+            sealIntact: true,
+            hoseClear: true,
+            signVisible: true,
+            unobstructed: true,
+            notes: 'Cilindro pesado e lacre íntegro.',
+            status: 'aprovado'
+          }
+        ],
+        created_at: new Date().toISOString()
+      },
+      {
+        id: 'ext_03',
+        code: 'EXT-03',
+        type: 'AGUA',
+        capacity: '10 L',
+        location_name: 'Pátio de Cavacos e Biomassa (Novo Horizonte)',
+        lat: -21.4678,
+        lng: -49.2225,
+        selo_inmetro: 'INMETRO-993214',
+        last_recharge_date: '2025-11-05',
+        next_recharge_date: '2026-11-05',
+        hydrostatic_test_date: '2027-11-05',
+        status: 'operacional',
+        qr_code_data: 'EXT-03-AP-10L',
+        inspections: [],
+        created_at: new Date().toISOString()
+      },
+      {
+        id: 'ext_04',
+        code: 'EXT-04',
+        type: 'PQS_ABC',
+        capacity: '12 kg (Carreta)',
+        location_name: 'Tanques de Combustível / Abastecimento (Novo Horizonte)',
+        lat: -21.4660,
+        lng: -49.2235,
+        selo_inmetro: 'INMETRO-442190',
+        last_recharge_date: '2024-09-01',
+        next_recharge_date: '2025-09-01',
+        hydrostatic_test_date: '2026-09-01',
+        status: 'vencido',
+        qr_code_data: 'EXT-04-PQS-12KG',
+        inspections: [],
+        created_at: new Date().toISOString()
+      }
+    ];
+  }
+
+  // 7. Brigade Members Seed
+  if (!memoryDb.brigade_members || memoryDb.brigade_members.length === 0) {
+    memoryDb.brigade_members = [
+      {
+        id: 'bm_01',
+        employee_id: 'emp_01',
+        role_in_brigade: 'lider',
+        shift: 'Turno A (Manhã)',
+        station_location: 'Oficina Central / Sala Elétrica',
+        lat: -21.4685,
+        lng: -49.2212,
+        training_cert_code: 'BRIG-2026-SP-901',
+        training_date: '2026-04-10',
+        training_expiry_date: '2027-04-10',
+        is_on_duty: true,
+        notes: 'Coordenador da equipe de combate direto no turno da manhã.',
+        created_at: new Date().toISOString()
+      },
+      {
+        id: 'bm_02',
+        employee_id: 'emp_02',
+        role_in_brigade: 'brigadista_combate',
+        shift: 'Turno A (Manhã)',
+        station_location: 'Manutenção Mecânica',
+        lat: -21.4690,
+        lng: -49.2220,
+        training_cert_code: 'BRIG-2026-SP-902',
+        training_date: '2026-04-10',
+        training_expiry_date: '2027-04-10',
+        is_on_duty: true,
+        notes: 'Operador de linha de mangueiras e hidrantes.',
+        created_at: new Date().toISOString()
+      },
+      {
+        id: 'bm_03',
+        employee_id: 'emp_04',
+        role_in_brigade: 'socorrista',
+        shift: 'Turno B (Tarde)',
+        station_location: 'Setor de Utilidades / Casa de Bombas',
+        lat: -21.4705,
+        lng: -49.2215,
+        training_cert_code: 'BRIG-2026-SP-904',
+        training_date: '2026-05-15',
+        training_expiry_date: '2027-05-15',
+        is_on_duty: false,
+        notes: 'Treinamento avançado de Suporte Básico de Vida (SBV) e DEA.',
+        created_at: new Date().toISOString()
+      },
+      {
+        id: 'bm_04',
+        employee_id: 'emp_03',
+        role_in_brigade: 'chefe_setor',
+        shift: 'Turno A (Manhã)',
+        station_location: 'Caldeiraria & Estruturas',
+        lat: -21.4670,
+        lng: -49.2230,
+        training_cert_code: 'BRIG-2024-SP-710',
+        training_date: '2024-02-10',
+        training_expiry_date: '2025-02-10',
+        is_on_duty: true,
+        notes: 'Responsável pela evacuação do galpão de caldeiraria.',
+        created_at: new Date().toISOString()
+      }
+    ];
+  }
+
+  // 8. Meeting Points Seed
+  if (!memoryDb.meeting_points || memoryDb.meeting_points.length === 0) {
+    memoryDb.meeting_points = [
+      {
+        id: 'mp_01',
+        code: 'PE-01',
+        name: 'Ponto de Encontro 01 - Estacionamento Principal da Portaria',
+        lat: -21.4665,
+        lng: -49.2202,
+        capacity_people: 150,
+        evacuated_sectors: ['Administração', 'Refeitório', 'Portaria', 'Ambulatório', 'Almoxarifado'],
+        coordinator_employee_id: 'emp_01',
+        description: 'Área externa descampada pavimentada, longe de linhas de alta tensão e fachadas envidraçadas.',
+        created_at: new Date().toISOString()
+      },
+      {
+        id: 'mp_02',
+        code: 'PE-02',
+        name: 'Ponto de Encontro 02 - Campo de Apoio Industrial Sul',
+        lat: -21.4725,
+        lng: -49.2225,
+        capacity_people: 100,
+        evacuated_sectors: ['Caldeiraria', 'Manutenção Mecânica', 'Utilidades', 'Silos'],
+        coordinator_employee_id: 'emp_02',
+        description: 'Área livre gramada próxima ao portão 03 com rota rápida de acesso de viaturas do Corpo de Bombeiros.',
+        created_at: new Date().toISOString()
+      }
+    ];
+  }
+
+  // 9. Evacuation Drills Seed
+  if (!memoryDb.evacuation_drills || memoryDb.evacuation_drills.length === 0) {
+    memoryDb.evacuation_drills = [
+      {
+        id: 'drill_01',
+        title: 'Simulado de Abandono Geral da Fábrica - 2º Semestre 2026',
+        date: '2026-09-24',
+        evacuation_time_seconds: 245,
+        total_evacuated_people: 84,
+        meeting_point_id: 'mp_01',
+        drill_type: 'simulado_geral',
+        evaluation: 'excelente',
+        observations: 'Alarme sonoro acionado às 14:00. Todos os setores evacuaram ordenadamente pelas rotas sinalizadas. Cômputo no PE-01 finalizado em 4min 05s sem feridos.',
+        responsible_name: 'Carlos Mendes (Técnico SST)',
+        created_at: new Date().toISOString()
+      }
+    ];
+  }
+
   saveDatabase();
 }
 
@@ -823,6 +1144,122 @@ export const db = {
       memoryDb.settings = { ...memoryDb.settings, ...newSettings };
       saveDatabase();
       return memoryDb.settings;
+    }
+  },
+
+  extinguishers: {
+    find: () => memoryDb.extinguishers || [],
+    findById: (id: string) => (memoryDb.extinguishers || []).find(e => e.id === id),
+    findByCode: (code: string) => (memoryDb.extinguishers || []).find(e => e.code.toLowerCase() === code.toLowerCase()),
+    create: (ext: Extinguisher) => {
+      if (!memoryDb.extinguishers) memoryDb.extinguishers = [];
+      memoryDb.extinguishers.push(ext);
+      saveDatabase();
+      return ext;
+    },
+    update: (id: string, updates: Partial<Extinguisher>) => {
+      if (!memoryDb.extinguishers) memoryDb.extinguishers = [];
+      const idx = memoryDb.extinguishers.findIndex(e => e.id === id);
+      if (idx !== -1) {
+        memoryDb.extinguishers[idx] = { ...memoryDb.extinguishers[idx], ...updates };
+        saveDatabase();
+        return memoryDb.extinguishers[idx];
+      }
+      return null;
+    },
+    delete: (id: string) => {
+      if (!memoryDb.extinguishers) memoryDb.extinguishers = [];
+      const idx = memoryDb.extinguishers.findIndex(e => e.id === id);
+      if (idx !== -1) {
+        const removed = memoryDb.extinguishers.splice(idx, 1)[0];
+        saveDatabase();
+        return removed;
+      }
+      return null;
+    }
+  },
+
+  brigadeMembers: {
+    find: () => memoryDb.brigade_members || [],
+    findById: (id: string) => (memoryDb.brigade_members || []).find(b => b.id === id),
+    findByEmployeeId: (empId: string) => (memoryDb.brigade_members || []).find(b => b.employee_id === empId),
+    create: (bm: BrigadeMember) => {
+      if (!memoryDb.brigade_members) memoryDb.brigade_members = [];
+      memoryDb.brigade_members.push(bm);
+      saveDatabase();
+      return bm;
+    },
+    update: (id: string, updates: Partial<BrigadeMember>) => {
+      if (!memoryDb.brigade_members) memoryDb.brigade_members = [];
+      const idx = memoryDb.brigade_members.findIndex(b => b.id === id);
+      if (idx !== -1) {
+        memoryDb.brigade_members[idx] = { ...memoryDb.brigade_members[idx], ...updates };
+        saveDatabase();
+        return memoryDb.brigade_members[idx];
+      }
+      return null;
+    },
+    delete: (id: string) => {
+      if (!memoryDb.brigade_members) memoryDb.brigade_members = [];
+      const idx = memoryDb.brigade_members.findIndex(b => b.id === id);
+      if (idx !== -1) {
+        const removed = memoryDb.brigade_members.splice(idx, 1)[0];
+        saveDatabase();
+        return removed;
+      }
+      return null;
+    }
+  },
+
+  meetingPoints: {
+    find: () => memoryDb.meeting_points || [],
+    findById: (id: string) => (memoryDb.meeting_points || []).find(m => m.id === id),
+    create: (mp: MeetingPoint) => {
+      if (!memoryDb.meeting_points) memoryDb.meeting_points = [];
+      memoryDb.meeting_points.push(mp);
+      saveDatabase();
+      return mp;
+    },
+    update: (id: string, updates: Partial<MeetingPoint>) => {
+      if (!memoryDb.meeting_points) memoryDb.meeting_points = [];
+      const idx = memoryDb.meeting_points.findIndex(m => m.id === id);
+      if (idx !== -1) {
+        memoryDb.meeting_points[idx] = { ...memoryDb.meeting_points[idx], ...updates };
+        saveDatabase();
+        return memoryDb.meeting_points[idx];
+      }
+      return null;
+    },
+    delete: (id: string) => {
+      if (!memoryDb.meeting_points) memoryDb.meeting_points = [];
+      const idx = memoryDb.meeting_points.findIndex(m => m.id === id);
+      if (idx !== -1) {
+        const removed = memoryDb.meeting_points.splice(idx, 1)[0];
+        saveDatabase();
+        return removed;
+      }
+      return null;
+    }
+  },
+
+  evacuationDrills: {
+    find: () => memoryDb.evacuation_drills || [],
+    findById: (id: string) => (memoryDb.evacuation_drills || []).find(d => d.id === id),
+    create: (drill: EvacuationDrill) => {
+      if (!memoryDb.evacuation_drills) memoryDb.evacuation_drills = [];
+      memoryDb.evacuation_drills.unshift(drill);
+      saveDatabase();
+      return drill;
+    },
+    delete: (id: string) => {
+      if (!memoryDb.evacuation_drills) memoryDb.evacuation_drills = [];
+      const idx = memoryDb.evacuation_drills.findIndex(d => d.id === id);
+      if (idx !== -1) {
+        const removed = memoryDb.evacuation_drills.splice(idx, 1)[0];
+        saveDatabase();
+        return removed;
+      }
+      return null;
     }
   }
 };

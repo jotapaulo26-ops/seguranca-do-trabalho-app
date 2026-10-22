@@ -11,6 +11,7 @@ import { AprCreatePage } from './pages/AprCreatePage';
 import { UsersAndRolesPage } from './pages/UsersAndRolesPage';
 import { AuditLogsPage } from './pages/AuditLogsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { BrigadePage } from './pages/BrigadePage';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoading } = useAuth();
@@ -48,6 +49,7 @@ export function App() {
             <Route index element={<Dashboard />} />
             <Route path="funcionarios" element={<Employees />} />
             <Route path="mapa" element={<RiskMapPage />} />
+            <Route path="brigada" element={<BrigadePage />} />
             <Route path="documentos" element={<DocumentsPage />} />
             <Route path="documentos/nova-apr" element={<AprCreatePage />} />
             <Route path="usuarios" element={<UsersAndRolesPage />} />

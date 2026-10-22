@@ -135,3 +135,104 @@ export interface CompanySettings {
   safetyManager: string;
   googleMapsApiKey?: string;
 }
+
+export interface ExtinguisherInspection {
+  id: string;
+  date: string;
+  inspectorName: string;
+  pressureOk: boolean;
+  sealIntact: boolean;
+  hoseClear: boolean;
+  signVisible: boolean;
+  unobstructed: boolean;
+  notes?: string;
+  status: 'aprovado' | 'reprovado';
+}
+
+export interface Extinguisher {
+  id: string;
+  code: string;
+  type: 'AGUA' | 'PQS_ABC' | 'PQS_BC' | 'CO2' | 'ESPUMA';
+  capacity: string;
+  location_name: string;
+  lat: number;
+  lng: number;
+  selo_inmetro: string;
+  last_recharge_date: string;
+  next_recharge_date: string;
+  hydrostatic_test_date: string;
+  status: 'operacional' | 'em_manutencao' | 'descarregado' | 'vencido';
+  calculatedStatus?: 'valido' | 'prestes_a_vencer' | 'vencido';
+  qr_code_data: string;
+  inspections: ExtinguisherInspection[];
+  created_at: string;
+}
+
+export interface BrigadeMember {
+  id: string;
+  employee_id: string;
+  employee?: Employee;
+  role_in_brigade: 'lider' | 'vice_lider' | 'chefe_setor' | 'brigadista_combate' | 'socorrista';
+  shift: string;
+  station_location: string;
+  lat?: number;
+  lng?: number;
+  training_cert_code?: string;
+  training_date: string;
+  training_expiry_date: string;
+  trainingStatus?: 'valido' | 'prestes_a_vencer' | 'vencido';
+  is_on_duty: boolean;
+  notes?: string;
+  created_at: string;
+}
+
+export interface MeetingPoint {
+  id: string;
+  code: string;
+  name: string;
+  lat: number;
+  lng: number;
+  capacity_people: number;
+  evacuated_sectors: string[];
+  coordinator_employee_id?: string;
+  coordinator?: Employee;
+  description: string;
+  photo_url?: string;
+  created_at: string;
+}
+
+export interface EvacuationDrill {
+  id: string;
+  title: string;
+  date: string;
+  evacuation_time_seconds: number;
+  total_evacuated_people: number;
+  meeting_point_id: string;
+  meetingPoint?: MeetingPoint;
+  drill_type: 'simulado_geral' | 'simulado_parcial' | 'emergencia_real';
+  evaluation: 'excelente' | 'bom' | 'regular' | 'insatisfatorio';
+  observations: string;
+  responsible_name: string;
+  created_at: string;
+}
+
+export interface BrigadeStats {
+  extinguishers: {
+    total: number;
+    expired: number;
+    warning: number;
+    ok: number;
+  };
+  members: {
+    total: number;
+    onDuty: number;
+    expiredCerts: number;
+  };
+  meetingPoints: {
+    total: number;
+  };
+  drills: {
+    total: number;
+    lastDate?: string;
+  };
+}

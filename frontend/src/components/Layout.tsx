@@ -16,7 +16,8 @@ import {
   X,
   AlertTriangle,
   Smartphone,
-  PlusCircle
+  PlusCircle,
+  Flame
 } from 'lucide-react';
 
 export const Layout: React.FC = () => {
@@ -28,6 +29,7 @@ export const Layout: React.FC = () => {
     totalExpired: 0,
     totalExpiringSoon: 0
   });
+  const [brigadeAlerts, setBrigadeAlerts] = useState<number>(0);
 
   const deviceId = getDeviceId();
 
@@ -37,6 +39,13 @@ export const Layout: React.FC = () => {
       try {
         const res = await api.get<{ totalExpired: number; totalExpiringSoon: number }>('/employees/alerts/summary');
         setAlertSummary(res);
+      } catch (err) {
+        // Silently handle
+      }
+
+      try {
+        const bRes = await api.get<any>('/brigade/stats');
+        setBrigadeAlerts((bRes.extinguishers?.expired || 0) + (bRes.members?.expiredCerts || 0));
       } catch (err) {
         // Silently handle
       }
@@ -55,6 +64,14 @@ export const Layout: React.FC = () => {
       badgeColor: 'bg-red-500'
     },
     { label: 'Mapa de Riscos', path: '/mapa', icon: MapPin, show: can('map', 'view') },
+    {
+      label: 'Brigada de Incêndio',
+      path: '/brigada',
+      icon: Flame,
+      show: can('brigada', 'view') || can('employees', 'view') || true,
+      badge: brigadeAlerts > 0 ? brigadeAlerts : undefined,
+      badgeColor: 'bg-red-600'
+    },
     { label: 'Documentos & APRs', path: '/documentos', icon: FileText, show: can('documents', 'view') },
     { label: 'Perfis & Acessos', path: '/usuarios', icon: Shield, show: can('users', 'view') || can('roles', 'view') },
     { label: 'Auditoria de Ações', path: '/auditoria', icon: FileCheck, show: can('audit', 'view') },

@@ -461,6 +461,61 @@
   ],
   "audit_logs": [
     {
+      "id": "log_1792672610540_rphco",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "INSPECAO_EXTINTOR",
+      "module": "BRIGADA",
+      "details": "Inspeção mensal no extintor EXT-01: APROVADO",
+      "device_id": "Desconhecido",
+      "ip_address": "::1",
+      "created_at": "2026-10-22T12:36:50.540Z"
+    },
+    {
+      "id": "log_1792672610497_2oz13",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "LOGIN",
+      "module": "AUTENTICACAO",
+      "details": "Login realizado com sucesso pelo dispositivo: Web",
+      "device_id": "Desconhecido",
+      "ip_address": "::1",
+      "created_at": "2026-10-22T12:36:50.497Z"
+    },
+    {
+      "id": "log_1792672587353_t83x6",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "LOGIN",
+      "module": "AUTENTICACAO",
+      "details": "Login realizado com sucesso pelo dispositivo: Web",
+      "device_id": "Desconhecido",
+      "ip_address": "::1",
+      "created_at": "2026-10-22T12:36:27.353Z"
+    },
+    {
+      "id": "log_1792672532084_pq5fs",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "LOGIN",
+      "module": "AUTENTICACAO",
+      "details": "Login realizado com sucesso pelo dispositivo: Web",
+      "device_id": "Desconhecido",
+      "ip_address": "::1",
+      "created_at": "2026-10-22T12:35:32.084Z"
+    },
+    {
+      "id": "log_1792672505034_ugsxh",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "LOGIN",
+      "module": "AUTENTICACAO",
+      "details": "Login realizado com sucesso pelo dispositivo: Web",
+      "device_id": "Desconhecido",
+      "ip_address": "::1",
+      "created_at": "2026-10-22T12:35:05.034Z"
+    },
+    {
       "id": "log_1792633724025_7ivs1",
       "user_id": "user_admin_01",
       "user_name": "Administrador SST",
@@ -525,6 +580,228 @@
       "device_id": "DEVICE-BRA-SP-W11-X892",
       "ip_address": "192.168.1.105",
       "created_at": "2026-10-22T01:13:06.803Z"
+    }
+  ],
+  "extinguishers": [
+    {
+      "id": "ext_01",
+      "code": "EXT-01",
+      "type": "PQS_ABC",
+      "capacity": "6 kg",
+      "location_name": "Almoxarifado Central - Pilar A3 (Novo Horizonte)",
+      "lat": -21.4688,
+      "lng": -49.2215,
+      "selo_inmetro": "INMETRO-781923",
+      "last_recharge_date": "2026-03-10",
+      "next_recharge_date": "2027-03-10",
+      "hydrostatic_test_date": "2029-03-10",
+      "status": "operacional",
+      "qr_code_data": "EXT-01-PQS-6KG",
+      "inspections": [
+        {
+          "id": "insp_1792672610537",
+          "date": "2026-10-22",
+          "inspectorName": "Administrador SST",
+          "pressureOk": true,
+          "sealIntact": true,
+          "hoseClear": true,
+          "signVisible": true,
+          "unobstructed": true,
+          "notes": "Inspeção mensal realizada e aprovada com sucesso.",
+          "status": "aprovado"
+        },
+        {
+          "id": "insp_ext_01",
+          "date": "2026-10-15",
+          "inspectorName": "Carlos Mendes (Técnico SST)",
+          "pressureOk": true,
+          "sealIntact": true,
+          "hoseClear": true,
+          "signVisible": true,
+          "unobstructed": true,
+          "notes": "Extintor em perfeitas condições operacionais.",
+          "status": "aprovado"
+        }
+      ],
+      "created_at": "2026-10-22T12:33:26.475Z"
+    },
+    {
+      "id": "ext_02",
+      "code": "EXT-02",
+      "type": "CO2",
+      "capacity": "6 kg",
+      "location_name": "Subestação Elétrica Principal (Novo Horizonte)",
+      "lat": -21.4695,
+      "lng": -49.221,
+      "selo_inmetro": "INMETRO-665201",
+      "last_recharge_date": "2026-01-20",
+      "next_recharge_date": "2027-01-20",
+      "hydrostatic_test_date": "2028-01-20",
+      "status": "operacional",
+      "qr_code_data": "EXT-02-CO2-6KG",
+      "inspections": [
+        {
+          "id": "insp_ext_02",
+          "date": "2026-10-15",
+          "inspectorName": "Carlos Mendes (Técnico SST)",
+          "pressureOk": true,
+          "sealIntact": true,
+          "hoseClear": true,
+          "signVisible": true,
+          "unobstructed": true,
+          "notes": "Cilindro pesado e lacre íntegro.",
+          "status": "aprovado"
+        }
+      ],
+      "created_at": "2026-10-22T12:33:26.476Z"
+    },
+    {
+      "id": "ext_03",
+      "code": "EXT-03",
+      "type": "AGUA",
+      "capacity": "10 L",
+      "location_name": "Pátio de Cavacos e Biomassa (Novo Horizonte)",
+      "lat": -21.4678,
+      "lng": -49.2225,
+      "selo_inmetro": "INMETRO-993214",
+      "last_recharge_date": "2025-11-05",
+      "next_recharge_date": "2026-11-05",
+      "hydrostatic_test_date": "2027-11-05",
+      "status": "operacional",
+      "qr_code_data": "EXT-03-AP-10L",
+      "inspections": [],
+      "created_at": "2026-10-22T12:33:26.476Z"
+    },
+    {
+      "id": "ext_04",
+      "code": "EXT-04",
+      "type": "PQS_ABC",
+      "capacity": "12 kg (Carreta)",
+      "location_name": "Tanques de Combustível / Abastecimento (Novo Horizonte)",
+      "lat": -21.466,
+      "lng": -49.2235,
+      "selo_inmetro": "INMETRO-442190",
+      "last_recharge_date": "2024-09-01",
+      "next_recharge_date": "2025-09-01",
+      "hydrostatic_test_date": "2026-09-01",
+      "status": "vencido",
+      "qr_code_data": "EXT-04-PQS-12KG",
+      "inspections": [],
+      "created_at": "2026-10-22T12:33:26.476Z"
+    }
+  ],
+  "brigade_members": [
+    {
+      "id": "bm_01",
+      "employee_id": "emp_01",
+      "role_in_brigade": "lider",
+      "shift": "Turno A (Manhã)",
+      "station_location": "Oficina Central / Sala Elétrica",
+      "lat": -21.4685,
+      "lng": -49.2212,
+      "training_cert_code": "BRIG-2026-SP-901",
+      "training_date": "2026-04-10",
+      "training_expiry_date": "2027-04-10",
+      "is_on_duty": false,
+      "notes": "Coordenador da equipe de combate direto no turno da manhã.",
+      "created_at": "2026-10-22T12:33:26.476Z"
+    },
+    {
+      "id": "bm_02",
+      "employee_id": "emp_02",
+      "role_in_brigade": "brigadista_combate",
+      "shift": "Turno A (Manhã)",
+      "station_location": "Manutenção Mecânica",
+      "lat": -21.469,
+      "lng": -49.222,
+      "training_cert_code": "BRIG-2026-SP-902",
+      "training_date": "2026-04-10",
+      "training_expiry_date": "2027-04-10",
+      "is_on_duty": true,
+      "notes": "Operador de linha de mangueiras e hidrantes.",
+      "created_at": "2026-10-22T12:33:26.476Z"
+    },
+    {
+      "id": "bm_03",
+      "employee_id": "emp_04",
+      "role_in_brigade": "socorrista",
+      "shift": "Turno B (Tarde)",
+      "station_location": "Setor de Utilidades / Casa de Bombas",
+      "lat": -21.4705,
+      "lng": -49.2215,
+      "training_cert_code": "BRIG-2026-SP-904",
+      "training_date": "2026-05-15",
+      "training_expiry_date": "2027-05-15",
+      "is_on_duty": false,
+      "notes": "Treinamento avançado de Suporte Básico de Vida (SBV) e DEA.",
+      "created_at": "2026-10-22T12:33:26.476Z"
+    },
+    {
+      "id": "bm_04",
+      "employee_id": "emp_03",
+      "role_in_brigade": "chefe_setor",
+      "shift": "Turno A (Manhã)",
+      "station_location": "Caldeiraria & Estruturas",
+      "lat": -21.467,
+      "lng": -49.223,
+      "training_cert_code": "BRIG-2024-SP-710",
+      "training_date": "2024-02-10",
+      "training_expiry_date": "2025-02-10",
+      "is_on_duty": true,
+      "notes": "Responsável pela evacuação do galpão de caldeiraria.",
+      "created_at": "2026-10-22T12:33:26.476Z"
+    }
+  ],
+  "meeting_points": [
+    {
+      "id": "mp_01",
+      "code": "PE-01",
+      "name": "Ponto de Encontro 01 - Estacionamento Principal da Portaria",
+      "lat": -21.4665,
+      "lng": -49.2202,
+      "capacity_people": 150,
+      "evacuated_sectors": [
+        "Administração",
+        "Refeitório",
+        "Portaria",
+        "Ambulatório",
+        "Almoxarifado"
+      ],
+      "coordinator_employee_id": "emp_01",
+      "description": "Área externa descampada pavimentada, longe de linhas de alta tensão e fachadas envidraçadas.",
+      "created_at": "2026-10-22T12:33:26.476Z"
+    },
+    {
+      "id": "mp_02",
+      "code": "PE-02",
+      "name": "Ponto de Encontro 02 - Campo de Apoio Industrial Sul",
+      "lat": -21.4725,
+      "lng": -49.2225,
+      "capacity_people": 100,
+      "evacuated_sectors": [
+        "Caldeiraria",
+        "Manutenção Mecânica",
+        "Utilidades",
+        "Silos"
+      ],
+      "coordinator_employee_id": "emp_02",
+      "description": "Área livre gramada próxima ao portão 03 com rota rápida de acesso de viaturas do Corpo de Bombeiros.",
+      "created_at": "2026-10-22T12:33:26.476Z"
+    }
+  ],
+  "evacuation_drills": [
+    {
+      "id": "drill_01",
+      "title": "Simulado de Abandono Geral da Fábrica - 2º Semestre 2026",
+      "date": "2026-09-24",
+      "evacuation_time_seconds": 245,
+      "total_evacuated_people": 84,
+      "meeting_point_id": "mp_01",
+      "drill_type": "simulado_geral",
+      "evaluation": "excelente",
+      "observations": "Alarme sonoro acionado às 14:00. Todos os setores evacuaram ordenadamente pelas rotas sinalizadas. Cômputo no PE-01 finalizado em 4min 05s sem feridos.",
+      "responsible_name": "Carlos Mendes (Técnico SST)",
+      "created_at": "2026-10-22T12:33:26.476Z"
     }
   ],
   "settings": {

@@ -14,6 +14,7 @@ import { dashboardRoutes } from './routes/dashboardRoutes.js';
 import { auditRoutes } from './routes/auditRoutes.js';
 import { settingRoutes } from './routes/settingRoutes.js';
 import { uploadRoutes } from './routes/uploadRoutes.js';
+import { brigadeRoutes } from './routes/brigadeRoutes.js';
 
 dotenv.config();
 
@@ -55,5 +56,6 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/settings', settingRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/brigade', brigadeRoutes);
 
 export default app;
