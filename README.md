@@ -1,6 +1,15 @@
 # 🦺 SegTrabalho - Sistema de Gestão de Segurança do Trabalho
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fjotapaulo26-ops%2Fseguranca-do-trabalho-app)
+
 Sistema completo e responsivo (Desktop e Smartphone / PWA) para gestão de Segurança e Saúde no Trabalho (SST), emissão de Análises Preliminares de Risco (APR) com rastreabilidade de dispositivos, mapa interativo de locais de risco (Trabalho em Altura e Espaços Confinados) com QR Code físico, cadastro de funcionários com controle de EPIs e treinamentos, e perfis de acesso personalizáveis.
+
+---
+
+## 📱 Teste Imediato no Celular (Link Público HTTPS)
+
+Acesse diretamente pelo smartphone:
+👉 **[https://4852b330c1f4a1.lhr.life](https://4852b330c1f4a1.lhr.life)**
 
 ---
 
