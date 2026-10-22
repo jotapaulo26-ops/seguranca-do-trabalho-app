@@ -4,6 +4,7 @@ import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { DocumentRecord } from '../types';
 import { generateAprPdf } from '../services/aprPdfGenerator';
+import { generateDocumentPdf } from '../services/documentPdfGenerator';
 import { SignaturePad } from '../components/SignaturePad';
 import {
   FileText,
@@ -19,7 +20,11 @@ import {
   X,
   MapPin,
   ExternalLink,
-  ShieldAlert
+  ShieldAlert,
+  Zap,
+  HardHat,
+  ClipboardCheck,
+  Award
 } from 'lucide-react';
 
 export const DocumentsPage: React.FC = () => {
@@ -29,9 +34,10 @@ export const DocumentsPage: React.FC = () => {
 
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<string>('APR');
+  const [activeTab, setActiveTab] = useState<string>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
 
   // Signature modal state
   const [signModalDoc, setSignModalDoc] = useState<DocumentRecord | null>(null);
@@ -62,7 +68,7 @@ export const DocumentsPage: React.FC = () => {
 
   const handleDownloadPdf = async (doc: DocumentRecord) => {
     try {
-      await generateAprPdf(doc);
+      await generateDocumentPdf(doc);
     } catch (err: any) {
       alert('Erro ao gerar PDF: ' + err.message);
     }
@@ -97,20 +103,24 @@ export const DocumentsPage: React.FC = () => {
   };
 
   const filteredDocs = documents.filter(doc => {
-    // Tab filtering
     let matchesTab = true;
     if (activeTab === 'APR') {
       matchesTab = doc.type.startsWith('APR_');
     } else if (activeTab === 'PT') {
-      matchesTab = doc.type === 'PT';
-    } else if (activeTab === 'OUTROS') {
-      matchesTab = !doc.type.startsWith('APR_') && doc.type !== 'PT';
+      matchesTab = doc.type === 'PT' || doc.type === 'PET';
+    } else if (activeTab === 'OS') {
+      matchesTab = doc.type === 'OS' || doc.type === 'OSS';
+    } else if (activeTab === 'EPI') {
+      matchesTab = doc.type === 'EPI_FICHA';
+    } else if (activeTab === 'CHECKLIST') {
+      matchesTab = doc.type === 'CHECKLIST' || doc.type === 'INSPECAO';
     }
 
     const matchesSearch =
       doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       doc.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (doc.device_id && doc.device_id.toLowerCase().includes(searchTerm.toLowerCase()));
+      (doc.device_id && doc.device_id.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (doc.employee_name && doc.employee_name.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchesStatus = statusFilter === 'ALL' || doc.status === statusFilter;
 
@@ -124,55 +134,85 @@ export const DocumentsPage: React.FC = () => {
         <div>
           <h2 className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
             <FileText className="w-5 h-5 text-amber-500" />
-            Central de Documentos & APRs
+            Central de Documentos de Segurança do Trabalho
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Emissão de Análises Preliminares de Risco, Permissões de Trabalho e arquivo digital com rastreabilidade
+            Emissão de APRs, Permissões de Trabalho (PT/PET), Ordens de Serviço (NR-01), Fichas de EPI e Checklists de Campo
           </p>
         </div>
 
         {can('documents', 'create') && (
           <button
-            onClick={() => navigate('/documentos/nova-apr')}
-            className="py-2.5 px-4 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl flex items-center gap-2 shadow-md shadow-amber-500/20 transition-all hover:scale-[1.02]"
+            onClick={() => setShowCreateModal(true)}
+            className="py-2.5 px-4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl flex items-center gap-2 shadow-md shadow-amber-500/20 transition-all hover:scale-[1.02]"
           >
             <Plus className="w-4 h-4" />
-            Emitir Nova APR
+            Emitir Documento SST
           </button>
         )}
       </div>
 
       {/* Category Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-1 text-xs font-bold border-b border-slate-200">
+      <div className="flex gap-2 overflow-x-auto pb-1 text-xs font-bold border-b border-slate-200 scrollbar-none">
         <button
-          onClick={() => setActiveTab('APR')}
-          className={`py-2 px-4 rounded-xl transition-all whitespace-nowrap ${
-            activeTab === 'APR'
+          onClick={() => setActiveTab('ALL')}
+          className={`py-2 px-3.5 rounded-xl transition-all whitespace-nowrap ${
+            activeTab === 'ALL'
               ? 'bg-slate-900 text-white shadow-sm'
               : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
           }`}
         >
-          📄 APRs - Análises de Risco ({documents.filter(d => d.type.startsWith('APR_')).length})
+          Todos ({documents.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('APR')}
+          className={`py-2 px-3.5 rounded-xl transition-all whitespace-nowrap ${
+            activeTab === 'APR'
+              ? 'bg-amber-500 text-slate-950 font-black shadow-sm'
+              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+        >
+          🦺 APRs ({documents.filter(d => d.type.startsWith('APR_')).length})
         </button>
         <button
           onClick={() => setActiveTab('PT')}
-          className={`py-2 px-4 rounded-xl transition-all whitespace-nowrap ${
+          className={`py-2 px-3.5 rounded-xl transition-all whitespace-nowrap ${
             activeTab === 'PT'
-              ? 'bg-slate-900 text-white shadow-sm'
+              ? 'bg-red-600 text-white shadow-sm'
               : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
           }`}
         >
-          🛡️ Permissões de Trabalho (PT) ({documents.filter(d => d.type === 'PT').length})
+          ⚡ PT / PET ({documents.filter(d => d.type === 'PT' || d.type === 'PET').length})
         </button>
         <button
-          onClick={() => setActiveTab('OUTROS')}
-          className={`py-2 px-4 rounded-xl transition-all whitespace-nowrap ${
-            activeTab === 'OUTROS'
-              ? 'bg-slate-900 text-white shadow-sm'
+          onClick={() => setActiveTab('OS')}
+          className={`py-2 px-3.5 rounded-xl transition-all whitespace-nowrap ${
+            activeTab === 'OS'
+              ? 'bg-blue-600 text-white shadow-sm'
               : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
           }`}
         >
-          📁 Outros Documentos (OSS, CIPA, Inspeções)
+          📋 Ordens de Serviço (OS) ({documents.filter(d => d.type === 'OS' || d.type === 'OSS').length})
+        </button>
+        <button
+          onClick={() => setActiveTab('EPI')}
+          className={`py-2 px-3.5 rounded-xl transition-all whitespace-nowrap ${
+            activeTab === 'EPI'
+              ? 'bg-emerald-600 text-white shadow-sm'
+              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+        >
+          🥾 Fichas de EPI ({documents.filter(d => d.type === 'EPI_FICHA').length})
+        </button>
+        <button
+          onClick={() => setActiveTab('CHECKLIST')}
+          className={`py-2 px-3.5 rounded-xl transition-all whitespace-nowrap ${
+            activeTab === 'CHECKLIST'
+              ? 'bg-purple-600 text-white shadow-sm'
+              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+        >
+          ✅ Checklists de Campo ({documents.filter(d => d.type === 'CHECKLIST' || d.type === 'INSPECAO').length})
         </button>
       </div>
 
@@ -234,13 +274,31 @@ export const DocumentsPage: React.FC = () => {
                     <span
                       className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${
                         doc.type === 'APR_ALTURA'
-                          ? 'bg-red-100 text-red-800'
+                          ? 'bg-amber-100 text-amber-900 border border-amber-300'
                           : doc.type === 'APR_ESPACO_CONFINADO'
-                          ? 'bg-amber-100 text-amber-800'
-                          : 'bg-blue-100 text-blue-800'
+                          ? 'bg-orange-100 text-orange-900 border border-orange-300'
+                          : doc.type === 'PT'
+                          ? 'bg-red-100 text-red-900 border border-red-300'
+                          : doc.type === 'PET'
+                          ? 'bg-rose-100 text-rose-900 border border-rose-300 font-black'
+                          : doc.type === 'OS' || doc.type === 'OSS'
+                          ? 'bg-blue-100 text-blue-900 border border-blue-300'
+                          : doc.type === 'EPI_FICHA'
+                          ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                          : doc.type === 'CHECKLIST'
+                          ? 'bg-purple-100 text-purple-900 border border-purple-300'
+                          : 'bg-slate-100 text-slate-800 border border-slate-300'
                       }`}
                     >
-                      {doc.type.replace('APR_', '').replace('_', ' ')}
+                      {doc.type === 'EPI_FICHA'
+                        ? 'Ficha EPI (NR-06)'
+                        : doc.type === 'OS'
+                        ? 'Ordem de Serviço (NR-01)'
+                        : doc.type === 'PET'
+                        ? 'PET Confinado (NR-33)'
+                        : doc.type === 'CHECKLIST'
+                        ? 'Checklist de Campo'
+                        : doc.type.replace('APR_', 'APR ').replace('_', ' ')}
                     </span>
 
                     <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
@@ -266,6 +324,12 @@ export const DocumentsPage: React.FC = () => {
                     </div>
                   )}
 
+                  {doc.employee_name && (
+                    <div className="text-xs text-blue-700 font-medium mb-1">
+                      Colaborador: <strong>{doc.employee_name}</strong>
+                    </div>
+                  )}
+
                   <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-400 mt-2">
                     <span>Emitido por: <strong className="text-slate-600">{doc.created_by_name}</strong></span>
                     <span>Data: {new Date(doc.created_at).toLocaleDateString('pt-BR')}</span>
@@ -280,10 +344,22 @@ export const DocumentsPage: React.FC = () => {
 
                 {/* Actions */}
                 <div className="flex flex-wrap items-center gap-2 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100">
+                  {/* If APR, quick button to issue PT */}
+                  {doc.type.startsWith('APR_') && (
+                    <button
+                      onClick={() => navigate(`/documentos/novo?type=PT&aprId=${doc.id}`)}
+                      className="py-2 px-3 bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors border border-red-200"
+                      title="Emitir Permissão de Trabalho vinculada a esta APR"
+                    >
+                      <Zap className="w-3.5 h-3.5" />
+                      Gerar PT
+                    </button>
+                  )}
+
                   <button
                     onClick={() => handleDownloadPdf(doc)}
                     className="py-2 px-3.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-sm transition-colors"
-                    title="Baixar em PDF com máxima informação"
+                    title="Baixar em PDF oficial formatado"
                   >
                     <Download className="w-4 h-4" />
                     Gerar PDF
@@ -422,6 +498,116 @@ export const DocumentsPage: React.FC = () => {
                 <Download className="w-4 h-4" />
                 Baixar PDF Completo
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: SELETOR DE EMISSÃO DE DOCUMENTOS SST (z-[99999]) */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-[99999] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-150">
+            <div className="p-5 bg-slate-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <span className="p-2 bg-amber-500 text-slate-950 rounded-xl font-bold">📑</span>
+                <div>
+                  <h3 className="font-black text-base">Qual documento você deseja emitir?</h3>
+                  <p className="text-xs text-slate-400">Selecione o modelo operacional conforme a Norma Regulamentadora (NR)</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div
+                onClick={() => {
+                  setShowCreateModal(false);
+                  navigate('/documentos/novo?type=APR');
+                }}
+                className="p-4 rounded-2xl border border-slate-200 hover:border-amber-400 bg-slate-50 hover:bg-amber-50/40 cursor-pointer transition-all space-y-1.5 group"
+              >
+                <div className="flex items-center gap-2 text-amber-700 font-bold text-sm">
+                  <span className="text-xl">🦺</span>
+                  <span className="group-hover:translate-x-0.5 transition-transform">APR (Análise de Risco)</span>
+                </div>
+                <p className="text-xs text-slate-500 leading-snug">
+                  Análise Preliminar para Altura (NR-35), Espaço Confinado (NR-33) ou serviços gerais.
+                </p>
+                <span className="text-[10px] font-black text-amber-700 block pt-1">Emitir APR →</span>
+              </div>
+
+              <div
+                onClick={() => {
+                  setShowCreateModal(false);
+                  navigate('/documentos/novo?type=PT');
+                }}
+                className="p-4 rounded-2xl border border-slate-200 hover:border-red-400 bg-slate-50 hover:bg-red-50/40 cursor-pointer transition-all space-y-1.5 group"
+              >
+                <div className="flex items-center gap-2 text-red-700 font-bold text-sm">
+                  <span className="text-xl">⚡</span>
+                  <span className="group-hover:translate-x-0.5 transition-transform">PT / PET (Permissão)</span>
+                </div>
+                <p className="text-xs text-slate-500 leading-snug">
+                  Liberação formal de trabalho crítico com teste contínuo de gases e vigia.
+                </p>
+                <span className="text-[10px] font-black text-red-700 block pt-1">Emitir PT / PET →</span>
+              </div>
+
+              <div
+                onClick={() => {
+                  setShowCreateModal(false);
+                  navigate('/documentos/novo?type=OS');
+                }}
+                className="p-4 rounded-2xl border border-slate-200 hover:border-blue-400 bg-slate-50 hover:bg-blue-50/40 cursor-pointer transition-all space-y-1.5 group"
+              >
+                <div className="flex items-center gap-2 text-blue-700 font-bold text-sm">
+                  <span className="text-xl">📋</span>
+                  <span className="group-hover:translate-x-0.5 transition-transform">Ordem de Serviço (NR-01)</span>
+                </div>
+                <p className="text-xs text-slate-500 leading-snug">
+                  Instruções de segurança, obrigações, proibições e ciência individual por colaborador.
+                </p>
+                <span className="text-[10px] font-black text-blue-700 block pt-1">Emitir OS NR-01 →</span>
+              </div>
+
+              <div
+                onClick={() => {
+                  setShowCreateModal(false);
+                  navigate('/documentos/novo?type=EPI_FICHA');
+                }}
+                className="p-4 rounded-2xl border border-slate-200 hover:border-emerald-400 bg-slate-50 hover:bg-emerald-50/40 cursor-pointer transition-all space-y-1.5 group"
+              >
+                <div className="flex items-center gap-2 text-emerald-700 font-bold text-sm">
+                  <span className="text-xl">🥾</span>
+                  <span className="group-hover:translate-x-0.5 transition-transform">Ficha de EPI (NR-06)</span>
+                </div>
+                <p className="text-xs text-slate-500 leading-snug">
+                  Recibo legal com número de CA e termo de guarda e conservação assinado.
+                </p>
+                <span className="text-[10px] font-black text-emerald-700 block pt-1">Emitir Ficha EPI →</span>
+              </div>
+
+              <div
+                onClick={() => {
+                  setShowCreateModal(false);
+                  navigate('/documentos/novo?type=CHECKLIST');
+                }}
+                className="p-4 rounded-2xl border border-slate-200 hover:border-purple-400 bg-slate-50 hover:bg-purple-50/40 cursor-pointer transition-all space-y-1.5 group col-span-1 sm:col-span-2"
+              >
+                <div className="flex items-center gap-2 text-purple-700 font-bold text-sm">
+                  <span className="text-xl">✅</span>
+                  <span className="group-hover:translate-x-0.5 transition-transform">Checklist Pré-Operacional de Campo</span>
+                </div>
+                <p className="text-xs text-slate-500 leading-snug">
+                  Vistorias de andaimes, escadas, cinto/talabarte, ferramentas elétricas e máquinas NR-12 com laudo Apto/Não Apto.
+                </p>
+                <span className="text-[10px] font-black text-purple-700 block pt-1">Iniciar Checklist de Campo →</span>
+              </div>
             </div>
           </div>
         </div>

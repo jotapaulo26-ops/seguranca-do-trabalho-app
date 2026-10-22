@@ -94,12 +94,14 @@ export interface RiskLocation {
 export interface DocumentRecord {
   id: string;
   code: string;
-  type: 'APR_GENERICA' | 'APR_ALTURA' | 'APR_ESPACO_CONFINADO' | 'PT' | 'INSPECAO' | 'OSS' | 'CIPA' | 'EXTERNO';
+  type: 'APR_GENERICA' | 'APR_ALTURA' | 'APR_ESPACO_CONFINADO' | 'PT' | 'PET' | 'OS' | 'EPI_FICHA' | 'CHECKLIST' | 'INSPECAO' | 'OSS' | 'CIPA' | 'EXTERNO';
   title: string;
   description?: string;
   location_id?: string;
+  employee_id?: string;
+  apr_id?: string;
   status: 'rascunho' | 'ativa' | 'encerrada' | 'cancelada';
-  data: any; // Dynamic JSON for APR/PT fields
+  data: any; // Dynamic JSON for APR/PT/OS/EPI/Checklist fields
   device_id?: string;
   device_name?: string;
   ip_address?: string;
@@ -672,6 +674,188 @@ export function initDatabase(): void {
       updated_at: new Date().toISOString()
     });
 
+    // Sample PT (Permissão de Trabalho vinculada à APR-01)
+    memoryDb.documents.push({
+      id: 'doc_pt_01',
+      code: 'PT-2026-0001',
+      type: 'PT',
+      title: 'PT - Liberação de Trabalho em Altura e Bloqueio Elétrico',
+      description: 'Permissão para intervenção na Torre de Grãos vinculada à APR-2026-0001',
+      location_id: 'risk_01',
+      apr_id: 'doc_apr_01',
+      status: 'ativa',
+      data: {
+        isPet: false,
+        workTypes: ['altura', 'loto', 'eletrica'],
+        validityStart: new Date().toISOString(),
+        validityEnd: new Date(Date.now() + 8 * 3600 * 1000).toISOString(),
+        supervisorName: 'Carlos Mendes (Técnico SST)',
+        authorizedWorkers: [
+          { id: 'emp_01', name: 'Marcos Aurélio Silveira', cpf: '123.456.789-00', role: 'Eletricista de Manutenção' },
+          { id: 'emp_02', name: 'Rafael Barbosa Lima', cpf: '234.567.890-11', role: 'Mecânico Industrial' }
+        ],
+        safetyMeasures: [
+          'Linha de vida vertical com trava-quedas inspecionada',
+          'Chave geral bloqueada com cadeado LOTO individual',
+          'Área térrea isolada em raio de 10 metros com cones e fita zebrada',
+          'Condições meteorológicas favoráveis confirmadas'
+        ],
+        emergencyPlan: 'Acionamento da Brigada de Incêndio / Resgate no Canal 04 do Rádio. Bombeiros: 193.',
+        deviceId: 'DEVICE-BRA-SP-W11-X892',
+        deviceName: 'Chrome 131 on Windows 11',
+        ipAddress: '192.168.1.105',
+        createdDate: new Date().toISOString()
+      },
+      device_id: 'DEVICE-BRA-SP-W11-X892',
+      device_name: 'Chrome 131 on Windows 11',
+      ip_address: '192.168.1.105',
+      created_by_user_id: 'user_tech_01',
+      created_by_name: 'Carlos Mendes',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+
+    // Sample OS (Ordem de Serviço NR-01 para Marcos Aurélio)
+    memoryDb.documents.push({
+      id: 'doc_os_01',
+      code: 'OS-2026-0001',
+      type: 'OS',
+      title: 'Ordem de Serviço NR-01 — Marcos Aurélio Silveira (Eletricista)',
+      description: 'OS de Segurança individual do colaborador Marcos Aurélio Silveira',
+      employee_id: 'emp_01',
+      status: 'ativa',
+      data: {
+        employee: {
+          id: 'emp_01',
+          name: 'Marcos Aurélio Silveira',
+          cpf: '123.456.789-00',
+          registration_number: 'REG-2024-001',
+          role: 'Eletricista de Manutenção',
+          department: 'Manutenção Elétrica',
+          admission_date: '2024-02-15'
+        },
+        activitiesDescription: 'Instalação, manutenção preventiva e corretiva em quadros elétricos de baixa e média tensão, fiação, motores e transformadores.',
+        identifiedRisks: {
+          fisicos: ['Ruído intermitente', 'Radiação não ionizante (arco elétrico)'],
+          quimicos: ['Produtos desengraxantes e solventes dielétricos'],
+          biologicos: ['Ausentes'],
+          ergonomicos: ['Postura inadequada durante fixação de painéis', 'Trabalho em pé prolongado'],
+          acidentes: ['Choque elétrico', 'Arco elétrico / queimaduras', 'Queda de nível em altura', 'Impacto contra ferramentas']
+        },
+        mandatoryEpis: [
+          'Capacete classe B para eletricista c/ jugular',
+          'Viseira facial contra arco elétrico',
+          'Vestimenta antichama NR-10 (Risco 2)',
+          'Luvas isolantes de borracha c/ sobreluva de vaqueta',
+          'Botina de segurança dielétrica sem componentes metálicos'
+        ],
+        preventiveMeasures: [
+          'Desenergizar e testar ausência de tensão antes de qualquer intervenção (NR-10)',
+          'Aplicar bloqueio e etiquetagem LOTO no painel principal',
+          'Inspecionar diariamente as ferramentas manuais isoladas 1000V',
+          'Utilizar cinto paraquedista ancorado quando trabalhar acima de 2 metros'
+        ],
+        employeeObligations: [
+          'Cumprir rigorosamente os procedimentos da NR-10 e NR-35;',
+          'Usar obrigatoriamente todos os EPIs fornecidos pela empresa;',
+          'Submeter-se aos exames do PCMSO e treinamentos de reciclagem;',
+          'Comunicar imediatamente qualquer anomalia ou risco grave ao SESMT.'
+        ],
+        prohibitions: [
+          'Trabalhar em circuitos energizados sem ordem de serviço específica para linha viva;',
+          'Utilizar adornos pessoais metálicos (alianças, anéis, relógios, correntes);',
+          'Improvisar fusíveis ou ferramentas não isoladas;',
+          'Operar equipamentos sem autorização expressa.'
+        ],
+        penaltiesNotice: 'O descumprimento das normas deste documento sujeita o empregado às penalidades disciplinares do Artigo 482 da CLT.',
+        acknowledgementText: 'Declaro que recebi as orientações desta Ordem de Serviço, fui treinado e me comprometo a seguir todas as medidas de segurança.',
+        deviceId: 'DEVICE-BRA-SP-W11-X892',
+        createdDate: new Date().toISOString()
+      },
+      device_id: 'DEVICE-BRA-SP-W11-X892',
+      device_name: 'Chrome 131 on Windows 11',
+      ip_address: '192.168.1.105',
+      created_by_user_id: 'user_admin_01',
+      created_by_name: 'Administrador SST',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+
+    // Sample Ficha de EPI (NR-06 para Marcos Aurélio)
+    memoryDb.documents.push({
+      id: 'doc_epi_01',
+      code: 'EPI-2026-0001',
+      type: 'EPI_FICHA',
+      title: 'Ficha de Entrega de EPI (NR-06) — Marcos Aurélio Silveira',
+      description: 'Termo de entrega e controle de EPIs com Certificado de Aprovação (CA)',
+      employee_id: 'emp_01',
+      status: 'ativa',
+      data: {
+        employee: {
+          id: 'emp_01',
+          name: 'Marcos Aurélio Silveira',
+          cpf: '123.456.789-00',
+          registration_number: 'REG-2024-001',
+          role: 'Eletricista de Manutenção',
+          department: 'Manutenção Elétrica'
+        },
+        deliveredItems: [
+          { name: 'Cinto de Segurança Tipo Paraquedista c/ Talabarte Duplo', caNumber: 'CA-36399', deliveryDate: '2026-01-15', quantity: 1, condition: 'Novo' },
+          { name: 'Capacete de Segurança Dielétrico com Jugular', caNumber: 'CA-14760', deliveryDate: '2026-01-15', quantity: 1, condition: 'Novo' },
+          { name: 'Óculos de Proteção contra Impactos e UV', caNumber: 'CA-20188', deliveryDate: '2026-01-15', quantity: 1, condition: 'Novo' },
+          { name: 'Botina de Segurança Dielétrica Bico Composite', caNumber: 'CA-42118', deliveryDate: '2026-01-15', quantity: 1, condition: 'Novo' }
+        ],
+        termOfResponsibility: 'Recebi da empresa os EPIs relacionados acima em perfeito estado de conservação e com CAs válidos. Comprometo-me a utilizá-los estritamente para o desempenho de minhas funções, responsabilizando-me por sua guarda e comunicando qualquer dano ao SESMT conforme estabelecido na NR-06.',
+        deviceId: 'DEVICE-BRA-SP-W11-X892',
+        createdDate: new Date().toISOString()
+      },
+      device_id: 'DEVICE-BRA-SP-W11-X892',
+      device_name: 'Chrome 131 on Windows 11',
+      ip_address: '192.168.1.105',
+      created_by_user_id: 'user_admin_01',
+      created_by_name: 'Administrador SST',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+
+    // Sample Checklist de Campo (NR-35 Andaimes e Plataformas)
+    memoryDb.documents.push({
+      id: 'doc_chk_01',
+      code: 'CHK-2026-0001',
+      type: 'CHECKLIST',
+      title: 'Checklist Pré-Operacional — Andaime Fachadeiro Torre 01',
+      description: 'Inspeção diária de conformidade estrutural e segurança do andaime',
+      location_id: 'risk_01',
+      status: 'ativa',
+      data: {
+        templateType: 'andaimes',
+        equipmentCode: 'AND-FACH-01',
+        equipmentDescription: 'Andaime metálico tubular modular de 14 metros',
+        inspectorName: 'Carlos Mendes (Técnico SST)',
+        items: [
+          { text: 'Sapatas apoiadas sobre pranchões nivelados e travadas', status: 'C', notes: 'Nivelamento conferido com nível bolha' },
+          { text: 'Guarda-corpo duplo (1,20m e 0,70m) com rodapé de 20cm presente', status: 'C', notes: 'Presente em todos os níveis de trabalho' },
+          { text: 'Piso de trabalho 100% completo, sem vãos, antiderrapante e fixado', status: 'C', notes: 'Pranchas metálicas encaixadas' },
+          { text: 'Escada de acesso com corrimão e gaiola ou linha de vida vertical', status: 'C', notes: 'Cabo guia instalado' },
+          { text: 'Ancoragem estrutural na fachada realizada a cada 4 metros', status: 'C', notes: 'Travessas fixadas com parabolt' },
+          { text: 'Aterramento elétrico contra descargas atmosféricas conectado', status: 'C', notes: 'Cordoalha ligada à malha de terra' },
+          { text: 'Placa de "ANDAIME LIBERADO" afixada na base de acesso', status: 'C', notes: 'Placa verde instalada' }
+        ],
+        isApproved: true,
+        evaluationResult: 'APTO PARA USO',
+        observations: 'Andaime em perfeitas condições normativas (NR-18 e NR-35). Liberação válida por 24 horas.',
+        deviceId: 'DEVICE-BRA-SP-W11-X892',
+        createdDate: new Date().toISOString()
+      },
+      device_id: 'DEVICE-BRA-SP-W11-X892',
+      device_name: 'Chrome 131 on Windows 11',
+      ip_address: '192.168.1.105',
+      created_by_user_id: 'user_tech_01',
+      created_by_name: 'Carlos Mendes',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+
     memoryDb.audit_logs.push({
       id: 'log_01',
       user_id: 'user_tech_01',
@@ -998,6 +1182,7 @@ export const db = {
   },
 
   trainings: {
+    find: () => memoryDb.trainings,
     findByEmployeeId: (empId: string) => memoryDb.trainings.filter(t => t.employee_id === empId),
     getAll: () => memoryDb.trainings,
     create: (trn: Training) => {
@@ -1026,6 +1211,7 @@ export const db = {
   },
 
   epis: {
+    find: () => memoryDb.epis,
     findByEmployeeId: (empId: string) => memoryDb.epis.filter(e => e.employee_id === empId),
     getAll: () => memoryDb.epis,
     create: (epi: EPI) => {

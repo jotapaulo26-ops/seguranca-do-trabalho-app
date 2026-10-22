@@ -98,12 +98,16 @@ export interface DigitalSignature {
 export interface DocumentRecord {
   id: string;
   code: string;
-  type: 'APR_GENERICA' | 'APR_ALTURA' | 'APR_ESPACO_CONFINADO' | 'PT' | 'INSPECAO' | 'OSS' | 'CIPA' | 'EXTERNO';
+  type: 'APR_GENERICA' | 'APR_ALTURA' | 'APR_ESPACO_CONFINADO' | 'PT' | 'PET' | 'OS' | 'EPI_FICHA' | 'CHECKLIST' | 'INSPECAO' | 'OSS' | 'CIPA' | 'EXTERNO';
   title: string;
   description?: string;
   location_id?: string;
   location_name?: string;
   location?: RiskLocation;
+  employee_id?: string;
+  employee_name?: string;
+  apr_id?: string;
+  linked_apr_code?: string;
   status: 'rascunho' | 'ativa' | 'encerrada' | 'cancelada';
   data: any;
   device_id?: string;
@@ -114,6 +118,79 @@ export interface DocumentRecord {
   file_url?: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface PTData {
+  isPet?: boolean;
+  workTypes: ('altura' | 'espaco_confinado' | 'quente' | 'eletrica' | 'loto' | 'escavacao')[];
+  validityStart: string;
+  validityEnd: string;
+  supervisorName: string;
+  watchName?: string;
+  authorizedWorkers: { id: string; name: string; cpf?: string; role?: string }[];
+  safetyMeasures: string[];
+  gasMeasurements?: { time: string; o2: string; lel: string; co: string; h2s: string; tester: string; status: 'ok' | 'alerta' | 'perigo' }[];
+  emergencyPlan?: string;
+  signatures?: DigitalSignature[];
+}
+
+export interface OSData {
+  employee: {
+    id: string;
+    name: string;
+    cpf: string;
+    registration_number: string;
+    role: string;
+    department: string;
+    admission_date?: string;
+  };
+  activitiesDescription: string;
+  identifiedRisks: {
+    fisicos: string[];
+    quimicos: string[];
+    biologicos: string[];
+    ergonomicos: string[];
+    acidentes: string[];
+  };
+  mandatoryEpis: string[];
+  preventiveMeasures: string[];
+  employeeObligations: string[];
+  prohibitions: string[];
+  penaltiesNotice: string;
+  acknowledgementText: string;
+  signatures?: DigitalSignature[];
+}
+
+export interface EpiFichaData {
+  employee: {
+    id: string;
+    name: string;
+    cpf: string;
+    registration_number: string;
+    role: string;
+    department: string;
+  };
+  deliveredItems: {
+    name: string;
+    caNumber: string;
+    deliveryDate: string;
+    quantity: number;
+    condition: string;
+  }[];
+  termOfResponsibility: string;
+  signatures?: DigitalSignature[];
+}
+
+export interface ChecklistData {
+  templateType: 'andaimes' | 'cinto_altura' | 'escadas' | 'ferramenta_eletrica' | 'trabalho_quente' | 'confinado' | 'geral';
+  equipmentCode: string;
+  equipmentDescription: string;
+  inspectorName: string;
+  items: { text: string; status: 'C' | 'NC' | 'NA'; notes?: string }[];
+  isApproved: boolean;
+  evaluationResult: string;
+  observations?: string;
+  signatures?: DigitalSignature[];
 }
 
 export interface AuditLog {

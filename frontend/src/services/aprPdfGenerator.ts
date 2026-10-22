@@ -4,6 +4,12 @@ import QRCode from 'qrcode';
 import { DocumentRecord } from '../types';
 
 export async function generateAprPdf(doc: DocumentRecord, companySettings?: any): Promise<void> {
+  // Delegate specialized documents to documentPdfGenerator
+  if (doc.type === 'PT' || doc.type === 'PET' || doc.type === 'OS' || doc.type === 'OSS' || doc.type === 'EPI_FICHA' || doc.type === 'CHECKLIST') {
+    const { generateDocumentPdf } = await import('./documentPdfGenerator');
+    return generateDocumentPdf(doc, companySettings);
+  }
+
   const pdf = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',

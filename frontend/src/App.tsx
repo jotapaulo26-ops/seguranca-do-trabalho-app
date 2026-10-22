@@ -8,6 +8,7 @@ import { Employees } from './pages/Employees';
 import { RiskMapPage } from './pages/RiskMapPage';
 import { DocumentsPage } from './pages/DocumentsPage';
 import { AprCreatePage } from './pages/AprCreatePage';
+import { DocumentCreatePage } from './pages/DocumentCreatePage';
 import { UsersAndRolesPage } from './pages/UsersAndRolesPage';
 import { AuditLogsPage } from './pages/AuditLogsPage';
 import { SettingsPage } from './pages/SettingsPage';
@@ -51,7 +52,8 @@ export function App() {
             <Route path="mapa" element={<RiskMapPage />} />
             <Route path="brigada" element={<BrigadePage />} />
             <Route path="documentos" element={<DocumentsPage />} />
-            <Route path="documentos/nova-apr" element={<AprCreatePage />} />
+            <Route path="documentos/novo" element={<DocumentCreatePage />} />
+            <Route path="documentos/nova-apr" element={<DocumentCreatePage />} />
             <Route path="usuarios" element={<UsersAndRolesPage />} />
             <Route path="auditoria" element={<AuditLogsPage />} />
             <Route path="configuracoes" element={<SettingsPage />} />
