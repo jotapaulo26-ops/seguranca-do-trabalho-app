@@ -1,0 +1,526 @@
+{
+  "roles": [
+    {
+      "id": "role_admin",
+      "name": "Administrador",
+      "description": "Acesso completo a todas as funções e configurações do sistema",
+      "permissions": {
+        "dashboard": [
+          "view"
+        ],
+        "employees": [
+          "view",
+          "create",
+          "edit",
+          "delete"
+        ],
+        "map": [
+          "view",
+          "create",
+          "edit",
+          "delete"
+        ],
+        "documents": [
+          "view",
+          "create",
+          "edit",
+          "delete",
+          "sign",
+          "approve"
+        ],
+        "users": [
+          "view",
+          "manage"
+        ],
+        "roles": [
+          "view",
+          "manage"
+        ],
+        "audit": [
+          "view"
+        ],
+        "settings": [
+          "view",
+          "manage"
+        ]
+      },
+      "is_system": 1,
+      "created_at": "2026-10-22T01:13:06.385Z"
+    },
+    {
+      "id": "role_tec_seg",
+      "name": "Técnico de Segurança",
+      "description": "Gestão operacional de SST, emissão de APRs, cadastro de funcionários e mapa de riscos",
+      "permissions": {
+        "dashboard": [
+          "view"
+        ],
+        "employees": [
+          "view",
+          "create",
+          "edit"
+        ],
+        "map": [
+          "view",
+          "create",
+          "edit"
+        ],
+        "documents": [
+          "view",
+          "create",
+          "edit",
+          "delete",
+          "sign",
+          "approve"
+        ],
+        "users": [
+          "view"
+        ],
+        "roles": [
+          "view"
+        ],
+        "audit": [
+          "view"
+        ],
+        "settings": [
+          "view"
+        ]
+      },
+      "is_system": 0,
+      "created_at": "2026-10-22T01:13:06.386Z"
+    },
+    {
+      "id": "role_encarregado",
+      "name": "Encarregado / Líder de Equipe",
+      "description": "Emissão e assinatura de APRs e acompanhamento dos locais de risco",
+      "permissions": {
+        "dashboard": [
+          "view"
+        ],
+        "employees": [
+          "view"
+        ],
+        "map": [
+          "view"
+        ],
+        "documents": [
+          "view",
+          "create",
+          "sign"
+        ],
+        "users": [],
+        "roles": [],
+        "audit": [],
+        "settings": []
+      },
+      "is_system": 0,
+      "created_at": "2026-10-22T01:13:06.387Z"
+    },
+    {
+      "id": "role_operador",
+      "name": "Funcionário / Operador",
+      "description": "Visualização de documentos e assinatura digital de APRs em campo",
+      "permissions": {
+        "dashboard": [
+          "view"
+        ],
+        "employees": [
+          "view"
+        ],
+        "map": [
+          "view"
+        ],
+        "documents": [
+          "view",
+          "sign"
+        ],
+        "users": [],
+        "roles": [],
+        "audit": [],
+        "settings": []
+      },
+      "is_system": 0,
+      "created_at": "2026-10-22T01:13:06.387Z"
+    }
+  ],
+  "users": [
+    {
+      "id": "user_admin_01",
+      "name": "Administrador SST",
+      "email": "admin@segtrabalho.com.br",
+      "password_hash": "$2a$10$S3M1oDyW9UIGuNXJ1jak4eBUHNdBEkB6oAjVHP1T/p8y92kQJkdMC",
+      "role_id": "role_admin",
+      "active": 1,
+      "created_at": "2026-10-22T01:13:06.803Z",
+      "device_id": "DESK-532G8R-0U50"
+    },
+    {
+      "id": "user_tech_01",
+      "name": "Carlos Mendes (Técnico SST)",
+      "email": "carlos.mendes@segtrabalho.com.br",
+      "password_hash": "$2a$10$S3M1oDyW9UIGuNXJ1jak4eqolEzre.slYe65a4UcV9/JqCMnsRTka",
+      "role_id": "role_tec_seg",
+      "active": 1,
+      "created_at": "2026-10-22T01:13:06.803Z"
+    }
+  ],
+  "employees": [
+    {
+      "id": "emp_01",
+      "name": "Marcos Aurélio Silveira",
+      "cpf": "123.456.789-01",
+      "registration_number": "MAT-1042",
+      "role": "Eletricista Industrial",
+      "department": "Manutenção Elétrica",
+      "admission_date": "2023-03-15",
+      "phone": "(11) 98765-4321",
+      "email": "marcos.silveira@empresa.com.br",
+      "status": "ativo",
+      "created_at": "2026-10-22T01:13:06.803Z"
+    },
+    {
+      "id": "emp_02",
+      "name": "Rafael Barbosa Lima",
+      "cpf": "234.567.890-12",
+      "registration_number": "MAT-1055",
+      "role": "Mecânico de Manutenção",
+      "department": "Manutenção Mecânica",
+      "admission_date": "2022-08-10",
+      "phone": "(11) 97654-3210",
+      "email": "rafael.lima@empresa.com.br",
+      "status": "ativo",
+      "created_at": "2026-10-22T01:13:06.803Z"
+    },
+    {
+      "id": "emp_03",
+      "name": "Antônio José dos Santos",
+      "cpf": "345.678.901-23",
+      "registration_number": "MAT-1089",
+      "role": "Soldador / Caldeireiro",
+      "department": "Caldeiraria & Estruturas",
+      "admission_date": "2021-11-01",
+      "phone": "(11) 96543-2109",
+      "email": "antonio.santos@empresa.com.br",
+      "status": "ativo",
+      "created_at": "2026-10-22T01:13:06.803Z"
+    },
+    {
+      "id": "emp_04",
+      "name": "Lucas Oliveira Ramos",
+      "cpf": "456.789.012-34",
+      "registration_number": "MAT-1102",
+      "role": "Operador de Utilidades",
+      "department": "Operações Industriais",
+      "admission_date": "2024-01-20",
+      "phone": "(11) 95432-1098",
+      "email": "lucas.ramos@empresa.com.br",
+      "status": "ativo",
+      "created_at": "2026-10-22T01:13:06.803Z"
+    }
+  ],
+  "trainings": [
+    {
+      "id": "trn_01",
+      "employee_id": "emp_01",
+      "type": "NR-35 Trabalho em Altura",
+      "institution": "SENAI Segurança",
+      "certificate_number": "CERT-35-9821",
+      "completion_date": "2026-02-10",
+      "expiry_date": "2028-02-10",
+      "created_at": "2026-10-22T01:13:06.803Z"
+    },
+    {
+      "id": "trn_02",
+      "employee_id": "emp_01",
+      "type": "NR-10 Segurança em Instalações Elétricas",
+      "institution": "Instituto Paulista SST",
+      "certificate_number": "CERT-10-4412",
+      "completion_date": "2025-05-15",
+      "expiry_date": "2027-05-15",
+      "created_at": "2026-10-22T01:13:06.803Z"
+    },
+    {
+      "id": "trn_03",
+      "employee_id": "emp_02",
+      "type": "NR-33 Espaço Confinado (Trabalhador Autorizado e Vigia)",
+      "institution": "Fundacentro",
+      "certificate_number": "CERT-33-3110",
+      "completion_date": "2024-11-05",
+      "expiry_date": "2026-11-05",
+      "created_at": "2026-10-22T01:13:06.803Z"
+    },
+    {
+      "id": "trn_04",
+      "employee_id": "emp_02",
+      "type": "NR-35 Trabalho em Altura",
+      "institution": "SENAI Segurança",
+      "certificate_number": "CERT-35-7729",
+      "completion_date": "2025-08-20",
+      "expiry_date": "2027-08-20",
+      "created_at": "2026-10-22T01:13:06.803Z"
+    },
+    {
+      "id": "trn_05",
+      "employee_id": "emp_03",
+      "type": "NR-35 Trabalho em Altura",
+      "institution": "SEST SENAT",
+      "certificate_number": "CERT-35-1022",
+      "completion_date": "2024-01-10",
+      "expiry_date": "2026-01-10",
+      "created_at": "2026-10-22T01:13:06.803Z"
+    },
+    {
+      "id": "trn_06",
+      "employee_id": "emp_04",
+      "type": "NR-33 Espaço Confinado (Supervisor de Entrada)",
+      "institution": "SESI SST",
+      "certificate_number": "CERT-33-8822",
+      "completion_date": "2026-04-12",
+      "expiry_date": "2027-04-12",
+      "created_at": "2026-10-22T01:13:06.803Z"
+    }
+  ],
+  "epis": [
+    {
+      "id": "epi_01",
+      "employee_id": "emp_01",
+      "name": "Cinto de Segurança Tipo Paraquedista c/ Talabarte Duplo",
+      "ca_number": "CA-36399",
+      "delivery_date": "2026-01-15",
+      "expiry_date": "2027-01-15",
+      "status": "entregue",
+      "created_at": "2026-10-22T01:13:06.803Z"
+    },
+    {
+      "id": "epi_02",
+      "employee_id": "emp_01",
+      "name": "Capacete de Segurança com Jugular",
+      "ca_number": "CA-14760",
+      "delivery_date": "2026-01-15",
+      "expiry_date": "2028-01-15",
+      "status": "entregue",
+      "created_at": "2026-10-22T01:13:06.803Z"
+    },
+    {
+      "id": "epi_03",
+      "employee_id": "emp_02",
+      "name": "Cinto de Segurança Paraquedista e Espaço Confinado",
+      "ca_number": "CA-42118",
+      "delivery_date": "2026-02-01",
+      "expiry_date": "2027-02-01",
+      "status": "entregue",
+      "created_at": "2026-10-22T01:13:06.803Z"
+    },
+    {
+      "id": "epi_04",
+      "employee_id": "emp_02",
+      "name": "Máscara Facial Inteira c/ Filtro Multigases",
+      "ca_number": "CA-20188",
+      "delivery_date": "2026-02-01",
+      "expiry_date": "2026-12-01",
+      "status": "entregue",
+      "created_at": "2026-10-22T01:13:06.803Z"
+    }
+  ],
+  "risk_locations": [
+    {
+      "id": "risk_01",
+      "name": "Silos de Grãos e Moenda - Torre Elevadora Superior (Novo Horizonte)",
+      "lat": -21.4689,
+      "lng": -49.2217,
+      "risk_type": "altura",
+      "description": "Estrutura metálica com 28 metros de altura. Risco de queda com diferença de nível e intempéries climáticas. Linha de vida obrigatória.",
+      "required_epis": [
+        "Cinto Paraquedista",
+        "Talabarte Duplo",
+        "Trava-quedas para cabo de aço",
+        "Capacete c/ jugular",
+        "Botina de segurança"
+      ],
+      "authorized_employee_ids": [
+        "emp_01",
+        "emp_02"
+      ],
+      "qr_code_data": "RISCO_LOC_01",
+      "created_by": "user_admin_01",
+      "created_at": "2026-10-22T01:13:06.803Z"
+    },
+    {
+      "id": "risk_02",
+      "name": "Galeria Subterrânea de Efluentes e Utilidades (Novo Horizonte)",
+      "lat": -21.4720,
+      "lng": -49.2205,
+      "risk_type": "espaco_confinado",
+      "description": "Profundidade de 4,5m com atmosfera potencialmente deficiente de O2 ou presença de H2S. Obrigatória ventilação mecânica forçada contínua e vigia.",
+      "required_epis": [
+        "Detector 4 Gases (O2, LEL, CO, H2S)",
+        "Tripé com Guincho Resgatador",
+        "Cinto de 4 Pontos",
+        "Exaustor Insuflador de Ar"
+      ],
+      "authorized_employee_ids": [
+        "emp_02",
+        "emp_04"
+      ],
+      "qr_code_data": "RISCO_LOC_02",
+      "created_by": "user_admin_01",
+      "created_at": "2026-10-22T01:13:06.803Z"
+    },
+    {
+      "id": "risk_03",
+      "name": "Tanque de Decantação e Reator Químico R-02 (Novo Horizonte)",
+      "lat": -21.4655,
+      "lng": -49.2245,
+      "risk_type": "ambos",
+      "description": "Boca de visita elevada localizada a 6m de altura com acesso ao interior de vaso confinado. Combina risco de queda e atmosfera inflamável.",
+      "required_epis": [
+        "Cinto Paraquedista e Espaço Confinado",
+        "Linha de Vida Vertical",
+        "Detector Multigases",
+        "Vigia dedicado",
+        "Tripé resgatador"
+      ],
+      "authorized_employee_ids": [
+        "emp_01",
+        "emp_02",
+        "emp_04"
+      ],
+      "qr_code_data": "RISCO_LOC_03",
+      "created_by": "user_admin_01",
+      "created_at": "2026-10-22T01:13:06.803Z"
+    }
+  ],
+  "documents": [
+    {
+      "id": "doc_apr_01",
+      "code": "APR-2026-0001",
+      "type": "APR_ALTURA",
+      "title": "APR - Manutenção do Exaustor da Torre Superior",
+      "description": "Trabalho em altura a 22 metros para troca de rolamentos e correias",
+      "location_id": "risk_01",
+      "status": "ativa",
+      "data": {
+        "workType": "Manutenção Preventiva no Motor do Exaustor da Torre",
+        "activityDetails": "Substituição de correias e rolamentos do motor de exaustão instalado na plataforma superior da Torre a 22 metros de altura.",
+        "riskClassification": "ALTO RISCO (NR-35)",
+        "heightMeters": 22,
+        "anchorPoints": "Viga I-10 metálica inspecionada com olhal certificado e cabo de aço 8mm.",
+        "weatherConditions": "Céu aberto, sem chuva, ventos a 12 km/h (dentro da faixa de segurança).",
+        "rescuePlan": "Plano de resgate vertical pré-definido com equipe de brigada comunicada via rádio canal 04 e maca tipo envelope pronta.",
+        "hazards": [
+          "Queda de pessoas com diferença de nível (> 2m)",
+          "Queda de ferramentas manuais ou sobressalentes",
+          "Acionamento acidental de maquinário rotativo",
+          "Choque elétrico durante intervenção na fiação"
+        ],
+        "preventiveMeasures": [
+          "Uso 100% contínuo de cinto tipo paraquedista ancorado na linha de vida",
+          "Isolamento e sinalização visual com cones e fita zebrada de toda a área térrea",
+          "Amarração obrigatória de todas as ferramentas com alças de pulso/segurança",
+          "Bloqueio elétrico e etiquetagem LOTO com cadeado individual do executante",
+          "Comunicação direta via rádio transceptor com a central de segurança"
+        ],
+        "requiredEpis": [
+          "Capacete com jugular de 3 pontos",
+          "Óculos de proteção contra impactos",
+          "Luva de vaqueta mecânica mista",
+          "Cinto paraquedista com ponto dorsal e peitoral",
+          "Talabarte duplo Y com absorvedor de energia",
+          "Botina de segurança com biqueira de composite"
+        ],
+        "teamMembers": [
+          {
+            "employeeId": "emp_01",
+            "name": "Marcos Aurélio Silveira",
+            "role": "Eletricista Executante",
+            "status": "NR-35 Válida"
+          },
+          {
+            "employeeId": "emp_02",
+            "name": "Rafael Barbosa Lima",
+            "role": "Mecânico Auxiliar",
+            "status": "NR-35 Válida"
+          }
+        ],
+        "supervisorName": "Carlos Mendes",
+        "supervisorRole": "Técnico de Segurança do Trabalho (MTE: 004128/SP)",
+        "supervisorSignatureDate": "2026-10-21 14:30:00",
+        "signed": true,
+        "deviceId": "DEVICE-BRA-SP-W11-X892",
+        "deviceName": "Chrome 131 on Windows 11 (Desktop Operacional)",
+        "ipAddress": "192.168.1.105"
+      },
+      "device_id": "DEVICE-BRA-SP-W11-X892",
+      "device_name": "Chrome 131 on Windows 11 (Desktop Operacional)",
+      "ip_address": "192.168.1.105",
+      "created_by_user_id": "user_tech_01",
+      "created_by_name": "Carlos Mendes (Técnico SST)",
+      "created_at": "2026-10-22T01:13:06.803Z",
+      "updated_at": "2026-10-22T01:13:06.803Z"
+    }
+  ],
+  "audit_logs": [
+    {
+      "id": "log_1792632372498_9vvcb",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "LOGIN",
+      "module": "AUTENTICACAO",
+      "details": "Login realizado com sucesso pelo dispositivo: Chrome no Windows 11/10 (DESK-532G8R-0U50)",
+      "device_id": "DESK-532G8R-0U50",
+      "ip_address": "::1",
+      "created_at": "2026-10-22T01:26:12.498Z"
+    },
+    {
+      "id": "log_1792632239718_5tq74",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "LOGIN",
+      "module": "AUTENTICACAO",
+      "details": "Login realizado com sucesso pelo dispositivo: Chrome on Windows 11",
+      "device_id": "DESK-TESTE-WIN11",
+      "ip_address": "::1",
+      "created_at": "2026-10-22T01:23:59.718Z"
+    },
+    {
+      "id": "log_1792632229012_sp91j",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "LOGIN",
+      "module": "AUTENTICACAO",
+      "details": "Login realizado com sucesso pelo dispositivo: Chrome on Windows 11",
+      "device_id": "DESK-TESTE-WIN11",
+      "ip_address": "::1",
+      "created_at": "2026-10-22T01:23:49.012Z"
+    },
+    {
+      "id": "log_1792632210503_8sog6",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "LOGIN",
+      "module": "AUTENTICACAO",
+      "details": "Login realizado com sucesso pelo dispositivo: Chrome on Windows 11",
+      "device_id": "DESK-TESTE-WIN11",
+      "ip_address": "::1",
+      "created_at": "2026-10-22T01:23:30.503Z"
+    },
+    {
+      "id": "log_01",
+      "user_id": "user_tech_01",
+      "user_name": "Carlos Mendes (Técnico SST)",
+      "action": "EMISSAO_APR",
+      "module": "DOCUMENTOS",
+      "details": "Emissão da APR-2026-0001 para trabalho em altura na Torre de Grãos",
+      "device_id": "DEVICE-BRA-SP-W11-X892",
+      "ip_address": "192.168.1.105",
+      "created_at": "2026-10-22T01:13:06.803Z"
+    }
+  ],
+  "settings": {
+    "companyName": "Indústria & Engenharia Brasil S.A.",
+    "companyCnpj": "12.345.678/0001-90",
+    "companyAddress": "Av. Industrial, 1500 - Distrito Industrial",
+    "safetyManager": "Carlos Mendes - Reg. MTE 004128/SP",
+    "googleMapsApiKey": ""
+  }
+}
