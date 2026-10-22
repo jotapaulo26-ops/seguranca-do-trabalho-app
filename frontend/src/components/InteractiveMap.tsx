@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import { RiskLocation } from '../types';
-import { AlertTriangle, Shield, QrCode, FileText, Plus, MapPin } from 'lucide-react';
+import { AlertTriangle, Shield, QrCode, FileText, Plus, MapPin, Layers } from 'lucide-react';
 
 // Custom Map Marker Icons using Leaflet DivIcon
 function createCustomIcon(riskType: string) {
@@ -20,7 +20,7 @@ function createCustomIcon(riskType: string) {
   return L.divIcon({
     className: 'custom-leaflet-marker',
     html: `
-      <div class="flex items-center justify-center w-9 h-9 rounded-full shadow-lg border-2 ${colorClass} transition-transform hover:scale-125 cursor-pointer font-bold text-sm">
+      <div class="flex items-center justify-center w-9 h-9 rounded-full shadow-2xl border-2 border-white ${colorClass} transition-transform hover:scale-125 cursor-pointer font-bold text-sm ring-2 ring-black/40">
         ${emoji}
       </div>
     `,
@@ -64,6 +64,9 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
 }) => {
   const [filterType, setFilterType] = useState<string>('all');
   const [clickedCoords, setClickedCoords] = useState<{ lat: number; lng: number } | null>(null);
+  
+  // DEFAULT MAP VIEW: SATELLITE (as requested by user)
+  const [mapMode, setMapMode] = useState<'satellite' | 'streets'>('satellite');
 
   const filteredLocations = locations.filter(loc => {
     if (filterType === 'all') return true;
@@ -78,45 +81,72 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   };
 
   return (
-    <div className="relative rounded-3xl overflow-hidden shadow-md border border-slate-200">
-      {/* Top Filter Bar and Location Badge */}
-      <div className="absolute top-3 left-3 z-[1000] flex flex-wrap items-center gap-2">
-        {/* Novo Horizonte - SP Location Badge */}
-        <div className="bg-slate-900 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-md flex items-center gap-1.5 border border-slate-800">
-          <MapPin className="w-3.5 h-3.5 text-amber-400" />
-          <span>Novo Horizonte - SP</span>
+    <div className="relative rounded-3xl overflow-hidden shadow-xl border-2 border-slate-700/50">
+      {/* Top Filter Bar, Satellite Switcher, and Location Badge */}
+      <div className="absolute top-3 left-3 right-3 z-[1000] flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+        {/* Left side: Location Badge and Satellite Mode Switcher */}
+        <div className="flex flex-wrap items-center gap-2 pointer-events-auto">
+          {/* Novo Horizonte - SP Location Badge */}
+          <div className="bg-slate-950/90 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-lg flex items-center gap-1.5 border border-slate-700 backdrop-blur-sm">
+            <MapPin className="w-3.5 h-3.5 text-amber-400" />
+            <span>Novo Horizonte - SP</span>
+          </div>
+
+          {/* Satellite vs Streets View Switcher */}
+          <div className="flex bg-slate-950/90 backdrop-blur-sm p-1 rounded-xl shadow-lg border border-slate-700 text-xs">
+            <button
+              onClick={() => setMapMode('satellite')}
+              className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
+                mapMode === 'satellite'
+                  ? 'bg-amber-500 text-slate-950 shadow-sm'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              <span>🛰️</span> Satélite (Padrão)
+            </button>
+            <button
+              onClick={() => setMapMode('streets')}
+              className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
+                mapMode === 'streets'
+                  ? 'bg-amber-500 text-slate-950 shadow-sm'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              <span>🗺️</span> Ruas
+            </button>
+          </div>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-wrap gap-1.5 bg-white/95 backdrop-blur-sm p-1 rounded-xl shadow-md border border-slate-200 text-xs">
+        {/* Right side: Risk Type Filters */}
+        <div className="flex flex-wrap gap-1 bg-slate-950/90 backdrop-blur-sm p-1 rounded-xl shadow-lg border border-slate-700 text-xs pointer-events-auto">
           <button
             onClick={() => setFilterType('all')}
-            className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${
-              filterType === 'all' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
+            className={`px-2.5 py-1.5 rounded-lg font-medium transition-colors ${
+              filterType === 'all' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-300 hover:text-white'
             }`}
           >
             Todos ({locations.length})
           </button>
           <button
             onClick={() => setFilterType('altura')}
-            className={`px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-1 transition-colors ${
-              filterType === 'altura' ? 'bg-red-600 text-white' : 'text-red-700 hover:bg-red-50'
+            className={`px-2 py-1.5 rounded-lg font-medium flex items-center gap-1 transition-colors ${
+              filterType === 'altura' ? 'bg-red-600 text-white font-bold' : 'text-red-400 hover:text-red-200'
             }`}
           >
             <span>🧗</span> Altura ({locations.filter(l => l.risk_type === 'altura').length})
           </button>
           <button
             onClick={() => setFilterType('espaco_confinado')}
-            className={`px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-1 transition-colors ${
-              filterType === 'espaco_confinado' ? 'bg-amber-600 text-white' : 'text-amber-700 hover:bg-amber-50'
+            className={`px-2 py-1.5 rounded-lg font-medium flex items-center gap-1 transition-colors ${
+              filterType === 'espaco_confinado' ? 'bg-amber-600 text-white font-bold' : 'text-amber-400 hover:text-amber-200'
             }`}
           >
             <span>🕳️</span> Confinado ({locations.filter(l => l.risk_type === 'espaco_confinado').length})
           </button>
           <button
             onClick={() => setFilterType('ambos')}
-            className={`px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-1 transition-colors ${
-              filterType === 'ambos' ? 'bg-purple-700 text-white' : 'text-purple-700 hover:bg-purple-50'
+            className={`px-2 py-1.5 rounded-lg font-medium flex items-center gap-1 transition-colors ${
+              filterType === 'ambos' ? 'bg-purple-700 text-white font-bold' : 'text-purple-400 hover:text-purple-200'
             }`}
           >
             <span>⚠️</span> Ambos ({locations.filter(l => l.risk_type === 'ambos').length})
@@ -125,22 +155,34 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
       </div>
 
       {/* Floating Instructions Banner */}
-      <div className="absolute bottom-3 left-3 z-[1000] bg-slate-900/90 text-white text-xs px-3 py-2 rounded-xl backdrop-blur-sm flex items-center gap-2 shadow-lg max-w-sm pointer-events-none">
+      <div className="absolute bottom-3 left-3 z-[1000] bg-slate-950/90 text-white text-xs px-3.5 py-2 rounded-xl backdrop-blur-sm flex items-center gap-2 shadow-2xl border border-slate-700 pointer-events-none">
         <MapPin className="w-4 h-4 text-amber-400 shrink-0" />
-        <span>Clique em qualquer ponto do mapa para abrir o formulário na sua frente.</span>
+        <span>Vista de satélite ativa. Clique em qualquer local para abrir o formulário.</span>
       </div>
 
       {/* Leaflet Map Container */}
       <MapContainer
         center={initialCenter}
         zoom={zoom}
-        style={{ height, width: '100%', minHeight: '400px' }}
+        style={{ height, width: '100%', minHeight: '420px' }}
         scrollWheelZoom={true}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+        {/* SATELLITE (DEFAULT) OR STREETS TILE LAYER */}
+        {mapMode === 'satellite' ? (
+          <TileLayer
+            key="satellite-layer"
+            attribution='&copy; Google Maps Imagens de Satélite &copy; CNES/Airbus &copy; Maxar'
+            url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+            maxZoom={20}
+          />
+        ) : (
+          <TileLayer
+            key="streets-layer"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            maxZoom={19}
+          />
+        )}
 
         <MapClickHandler onMapClick={handleMapClick} />
 

@@ -152,7 +152,7 @@
       "role_id": "role_admin",
       "active": 1,
       "created_at": "2026-10-22T01:13:06.803Z",
-      "device_id": "DESK-532G8R-0U50"
+      "device_id": "DESK-TESTE-WIN11"
     },
     {
       "id": "user_tech_01",
@@ -348,7 +348,7 @@
     {
       "id": "risk_02",
       "name": "Galeria Subterrânea de Efluentes e Utilidades (Novo Horizonte)",
-      "lat": -21.4720,
+      "lat": -21.472,
       "lng": -49.2205,
       "risk_type": "espaco_confinado",
       "description": "Profundidade de 4,5m com atmosfera potencialmente deficiente de O2 ou presença de H2S. Obrigatória ventilação mecânica forçada contínua e vigia.",
@@ -460,6 +460,17 @@
     }
   ],
   "audit_logs": [
+    {
+      "id": "log_1792633724025_7ivs1",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "LOGIN",
+      "module": "AUTENTICACAO",
+      "details": "Login realizado com sucesso pelo dispositivo: Chrome on Windows 11",
+      "device_id": "DESK-TESTE-WIN11",
+      "ip_address": "::1",
+      "created_at": "2026-10-22T01:48:44.025Z"
+    },
     {
       "id": "log_1792632372498_9vvcb",
       "user_id": "user_admin_01",
