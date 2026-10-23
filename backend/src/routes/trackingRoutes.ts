@@ -11,6 +11,8 @@ export interface ActiveUserLocation {
   roleType: 'brigadista' | 'sst' | 'executante' | 'admin';
   phone?: string;
   department?: string;
+  photo_url?: string;
+  isOnline?: boolean;
   lat: number;
   lng: number;
   accuracy?: number;
@@ -89,6 +91,8 @@ trackingRoutes.post('/heartbeat', authenticateToken, (req: Request, res: Respons
     roleType,
     phone: matchedEmp?.phone,
     department: matchedEmp?.department,
+    photo_url: matchedEmp?.photo_url || db.users.findById(req.user.id)?.photo_url,
+    isOnline: true,
     lat: numLat,
     lng: numLng,
     accuracy: accuracy !== undefined ? Number(accuracy) : undefined,
@@ -158,25 +162,79 @@ trackingRoutes.post('/heartbeat', authenticateToken, (req: Request, res: Respons
   });
 });
 
-// 2. ACTIVE USERS: Fetch all online users updated in the last 30 seconds
+// 2. ACTIVE & REGISTERED USERS: Fetch all users (Live GPS when online + Usina coordinates when offline)
 trackingRoutes.get('/active-users', authenticateToken, (req: Request, res: Response) => {
   const currentUserId = req.user?.id;
   const now = Date.now();
   const STALE_TIMEOUT_MS = 30000; // 30 seconds cutoff
 
-  const result: (ActiveUserLocation & { isCurrentUser: boolean })[] = [];
-
-  // Cleanup stale sessions and populate active list
+  // 1. Cleanup stale sessions
   for (const [userId, userLoc] of activeUsersMap.entries()) {
     if (now - userLoc.lastSeenTimestamp > STALE_TIMEOUT_MS) {
       activeUsersMap.delete(userId);
-    } else {
-      result.push({
-        ...userLoc,
-        isCurrentUser: userId === currentUserId
-      });
     }
   }
+
+  const result: (ActiveUserLocation & { isCurrentUser: boolean })[] = [];
+  const processedUserIds = new Set<string>();
+
+  // 2. Add all live online users first
+  for (const [userId, userLoc] of activeUsersMap.entries()) {
+    processedUserIds.add(userId);
+    result.push({
+      ...userLoc,
+      isOnline: true,
+      isCurrentUser: userId === currentUserId
+    });
+  }
+
+  // 3. Add all remaining registered & approved users as offline workers positioned in Usina Santa Isabel
+  const allUsers = db.users.find().filter(u => u.active === 1 || u.approval_status === 'aprovado');
+  const allRoles = db.roles.find();
+  const allEmployees = db.employees.find();
+
+  const baseLat = -21.5083;
+  const baseLng = -49.2081;
+
+  allUsers.forEach((u, idx) => {
+    if (processedUserIds.has(u.id)) return;
+
+    const matchedEmp = allEmployees.find(e => e.id === u.id || e.email.toLowerCase() === u.email.toLowerCase());
+    const role = allRoles.find(r => r.id === u.role_id);
+    const roleName = role ? role.name : u.role_id || 'Colaborador';
+
+    let roleType: 'brigadista' | 'sst' | 'executante' | 'admin' = 'executante';
+    const roleLower = roleName.toLowerCase();
+    if (roleLower.includes('brigad') || roleLower.includes('socorr')) {
+      roleType = 'brigadista';
+    } else if (roleLower.includes('técnico') || roleLower.includes('engenh') || roleLower.includes('sst')) {
+      roleType = 'sst';
+    } else if (roleLower.includes('admin')) {
+      roleType = 'admin';
+    }
+
+    // Distribute offline markers in the Usina perimeter
+    const angle = (idx * 2 * Math.PI) / Math.max(1, allUsers.length);
+    const offsetLat = Math.sin(angle) * 0.00040;
+    const offsetLng = Math.cos(angle) * 0.00045;
+
+    result.push({
+      userId: u.id,
+      name: u.name,
+      roleName,
+      roleType,
+      phone: u.phone || matchedEmp?.phone,
+      department: u.department || matchedEmp?.department || 'Usina Santa Isabel',
+      photo_url: u.photo_url || matchedEmp?.photo_url,
+      isOnline: false,
+      lat: Number((baseLat + offsetLat).toFixed(6)),
+      lng: Number((baseLng + offsetLng).toFixed(6)),
+      accuracy: 50,
+      lastSeenAt: u.created_at || new Date().toISOString(),
+      lastSeenTimestamp: 0,
+      isCurrentUser: u.id === currentUserId
+    });
+  });
 
   return res.json(result);
 });

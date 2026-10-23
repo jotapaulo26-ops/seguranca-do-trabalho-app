@@ -180,6 +180,19 @@ employeeRoutes.put('/:id', authenticateToken, requirePermission('employees', 'ed
   if (status) updates.status = status;
 
   const updated = db.employees.update(id, updates);
+
+  // Sincroniza dados com usuário correspondente
+  const matchedUser = db.users.findById(id) || db.users.find().find(u => u.email?.toLowerCase() === emp.email?.toLowerCase());
+  if (matchedUser) {
+    db.users.update(matchedUser.id, {
+      ...(updates.name ? { name: updates.name } : {}),
+      ...(updates.department ? { department: updates.department } : {}),
+      ...(updates.phone !== undefined ? { phone: updates.phone } : {}),
+      ...(updates.photo_url !== undefined ? { photo_url: updates.photo_url } : {}),
+      ...(updates.status ? { active: updates.status === 'ativo' ? 1 : 0 } : {})
+    });
+  }
+
   logAudit(req, 'EDITAR_FUNCIONARIO', 'FUNCIONARIOS', `Dados do funcionário ${emp.name} atualizados`);
 
   return res.json(updated);
@@ -201,6 +214,12 @@ employeeRoutes.post('/:id/biometrics', authenticateToken, (req: Request, res: Re
     photo_url,
     has_facial_biometrics: true
   } as any);
+
+  // Sincroniza foto biométrica com o usuário do sistema
+  const user = db.users.findById(id) || db.users.find().find(u => u.email?.toLowerCase() === emp.email?.toLowerCase());
+  if (user) {
+    db.users.update(user.id, { photo_url });
+  }
 
   logAudit(req, 'CADASTRO_BIOMETRICO', 'FUNCIONARIOS', `Biometria facial registrada para o colaborador ${emp.name}`);
   return res.json({ message: 'Biometria facial cadastrada com sucesso!', employee: updated });

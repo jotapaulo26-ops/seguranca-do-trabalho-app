@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { Camera, ShieldCheck, AlertTriangle, RefreshCw, X, Check, Lock } from 'lucide-react';
+import { Camera, ShieldCheck, AlertTriangle, RefreshCw, X, Check, Lock, Sparkles } from 'lucide-react';
 import { compareFaces, BiometricMatchResult } from '../services/facialBiometrics';
 
 interface BiometricLoginModalProps {
@@ -22,7 +22,7 @@ export const BiometricLoginModal: React.FC<BiometricLoginModalProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  const [isInitializing, setIsInitializing] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [matchResult, setMatchResult] = useState<BiometricMatchResult | null>(null);
@@ -31,8 +31,30 @@ export const BiometricLoginModal: React.FC<BiometricLoginModalProps> = ({
 
   const stopStream = useCallback(() => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current.getTracks().forEach((track) => {
+        try {
+          track.stop();
+        } catch (e) {}
+      });
       streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  }, []);
+
+  const attachStreamToVideo = useCallback((stream: MediaStream) => {
+    streamRef.current = stream;
+    const video = videoRef.current;
+    if (video) {
+      video.srcObject = stream;
+      video.onloadedmetadata = () => {
+        video.play().then(() => {
+          setIsInitializing(false);
+        }).catch(() => {
+          setIsInitializing(false);
+        });
+      };
     }
   }, []);
 
@@ -55,27 +77,17 @@ export const BiometricLoginModal: React.FC<BiometricLoginModalProps> = ({
       };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      streamRef.current = stream;
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play().catch(() => {});
-      }
+      attachStreamToVideo(stream);
     } catch (err) {
       try {
         const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-        streamRef.current = fallbackStream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = fallbackStream;
-          await videoRef.current.play().catch(() => {});
-        }
+        attachStreamToVideo(fallbackStream);
       } catch (fallbackErr) {
-        setCameraError('Permissão de câmera não concedida. Permita o uso da câmera frontal para validação biométrica.');
+        setIsInitializing(false);
+        setCameraError('Permissão de câmera não concedida. Por favor, autorize o acesso à câmera frontal no seu navegador para validar sua biometria.');
       }
-    } finally {
-      setIsInitializing(false);
     }
-  }, [stopStream]);
+  }, [stopStream, attachStreamToVideo]);
 
   useEffect(() => {
     if (isOpen) {
@@ -88,10 +100,18 @@ export const BiometricLoginModal: React.FC<BiometricLoginModalProps> = ({
     };
   }, [isOpen, startCamera, stopStream]);
 
+  // Ensure stream stays attached if ref becomes available
+  useEffect(() => {
+    if (isOpen && streamRef.current && videoRef.current && !videoRef.current.srcObject) {
+      videoRef.current.srcObject = streamRef.current;
+      videoRef.current.play().catch(() => {});
+    }
+  }, [isOpen, isInitializing]);
+
   // Capture frame and compare with reference
   const handleScanFace = async () => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || !referencePhotoUrl) return;
 
     setIsAnalyzing(true);
     setAuthFailed(null);
@@ -113,32 +133,30 @@ export const BiometricLoginModal: React.FC<BiometricLoginModalProps> = ({
       return;
     }
 
-    // Frontal mirror
+    // Mirroring frontal camera
     ctx.translate(targetSize, 0);
     ctx.scale(-1, 1);
     ctx.drawImage(video, startX, startY, size, size, 0, 0, targetSize, targetSize);
 
-    const liveDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+    const liveDataUrl = canvas.toDataURL('image/jpeg', 0.85);
     setCapturedPhoto(liveDataUrl);
 
     try {
       const result = await compareFaces(referencePhotoUrl, liveDataUrl);
       setMatchResult(result);
 
-      if (result.isMatch && result.score >= 60) {
-        // Stop stream and call success
+      if (result.isMatch && result.score >= 58) {
         stopStream();
         setTimeout(() => {
           onSuccess(result.score);
-        }, 800);
+        }, 700);
       } else {
-        // Beep alert
         playDivergenceBeep();
-        setAuthFailed(`Rosto divergente do titular cadastrado (${result.score}% de similaridade). Acesso não autorizado!`);
-        if (onFailure) onFailure('Divergência facial.');
+        setAuthFailed(`Rosto divergente do titular cadastrado (${result.score}% de similaridade). Acesso bloqueado!`);
+        if (onFailure) onFailure('Divergência facial detectada.');
       }
     } catch (err: any) {
-      setAuthFailed('Erro ao processar análise biométrica. Tente novamente com boa iluminação.');
+      setAuthFailed('Erro ao analisar biometria facial. Ajuste a iluminação e tente novamente.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -159,7 +177,7 @@ export const BiometricLoginModal: React.FC<BiometricLoginModalProps> = ({
       osc.start();
       osc.stop(ctx.currentTime + 0.45);
     } catch (e) {
-      // AudioContext not allowed or unsupported
+      // AudioContext not permitted or unsupported
     }
   };
 
@@ -176,11 +194,14 @@ export const BiometricLoginModal: React.FC<BiometricLoginModalProps> = ({
             </div>
             <div>
               <h3 className="font-extrabold text-sm text-white">Validação Biométrica Facial</h3>
-              <p className="text-[11px] text-amber-300 font-medium">Titular: {userName}</p>
+              <p className="text-[11px] text-amber-300 font-medium truncate max-w-[240px]">Colaborador: {userName}</p>
             </div>
           </div>
           <button
-            onClick={onClose}
+            onClick={() => {
+              stopStream();
+              onClose();
+            }}
             className="p-1.5 text-slate-400 hover:text-white rounded-full hover:bg-slate-800 transition-colors"
           >
             <X className="w-5 h-5" />
@@ -193,7 +214,7 @@ export const BiometricLoginModal: React.FC<BiometricLoginModalProps> = ({
             <div className="w-full p-4 rounded-2xl bg-red-950/40 border border-red-800/80 text-red-300 text-xs flex items-start gap-2.5 my-4">
               <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
               <div>
-                <p className="font-bold">Acesso à câmera bloqueado</p>
+                <p className="font-bold">Acesso à câmera indisponível</p>
                 <p className="text-[11px] mt-1 text-slate-300">{cameraError}</p>
                 <button
                   onClick={startCamera}
@@ -204,25 +225,40 @@ export const BiometricLoginModal: React.FC<BiometricLoginModalProps> = ({
               </div>
             </div>
           ) : (
-            <div className="relative w-64 h-64 rounded-full overflow-hidden border-4 border-amber-500/70 shadow-2xl bg-black my-2 flex items-center justify-center">
-              {isInitializing ? (
-                <div className="flex flex-col items-center gap-2 text-slate-400 text-xs">
-                  <RefreshCw className="w-6 h-6 animate-spin text-amber-500" />
-                  <span>Iniciando câmera frontal...</span>
+            <div className="relative w-64 h-64 rounded-full overflow-hidden border-4 border-amber-500 shadow-2xl bg-black my-2 flex items-center justify-center">
+              {/* Permanent Video Element in DOM to ensure tracks are always wired */}
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className={`w-full h-full object-cover transform scale-x-[-1] ${
+                  capturedPhoto && !isAnalyzing ? 'hidden' : 'block'
+                }`}
+              />
+
+              {/* If snapshot captured and analyzing or result shown */}
+              {capturedPhoto && (
+                <img
+                  src={capturedPhoto}
+                  alt="Foto Capturada"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              )}
+
+              {/* Loading Spinner Overlay while camera starts */}
+              {isInitializing && !capturedPhoto && (
+                <div className="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center gap-2 text-slate-300 text-xs">
+                  <RefreshCw className="w-7 h-7 animate-spin text-amber-500" />
+                  <span className="font-semibold">Iniciando câmera frontal...</span>
                 </div>
-              ) : capturedPhoto && !isAnalyzing ? (
-                <img src={capturedPhoto} alt="Foto Capturada" className="w-full h-full object-cover" />
-              ) : (
+              )}
+
+              {/* Facial Scanner Radar Overlay */}
+              {!isInitializing && !capturedPhoto && (
                 <>
-                  <video
-                    ref={videoRef}
-                    playsInline
-                    muted
-                    className="w-full h-full object-cover transform scale-x-[-1]"
-                  />
-                  {/* Facial Scanner Radar Overlay */}
-                  <div className="absolute inset-0 border-2 border-amber-400/40 rounded-full pointer-events-none animate-pulse"></div>
-                  <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-amber-400/70 shadow-[0_0_10px_#f59e0b] pointer-events-none animate-bounce"></div>
+                  <div className="absolute inset-0 border-2 border-amber-400/50 rounded-full pointer-events-none animate-pulse"></div>
+                  <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-amber-400 shadow-[0_0_12px_#f59e0b] pointer-events-none animate-bounce"></div>
                 </>
               )}
             </div>
@@ -230,36 +266,36 @@ export const BiometricLoginModal: React.FC<BiometricLoginModalProps> = ({
 
           {/* Feedback messages */}
           {authFailed && (
-            <div className="w-full mt-3 p-3 bg-red-950/60 border border-red-700/80 rounded-2xl text-red-200 text-xs flex items-center gap-2 animate-in fade-in">
+            <div className="w-full mt-3 p-3 bg-red-950/70 border border-red-700 rounded-2xl text-red-200 text-xs flex items-center gap-2 animate-in fade-in">
               <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
-              <span className="font-semibold text-[11px]">{authFailed}</span>
+              <span className="font-bold text-[11px]">{authFailed}</span>
             </div>
           )}
 
           {matchResult && matchResult.isMatch && (
-            <div className="w-full mt-3 p-3 bg-emerald-950/60 border border-emerald-600/80 rounded-2xl text-emerald-200 text-xs flex items-center justify-between animate-in fade-in">
+            <div className="w-full mt-3 p-3 bg-emerald-950/70 border border-emerald-500 rounded-2xl text-emerald-200 text-xs flex items-center justify-between animate-in fade-in">
               <div className="flex items-center gap-2">
                 <Check className="w-4 h-4 text-emerald-400 shrink-0" />
                 <span className="font-bold">Biometria Aprovada ({matchResult.score}%)</span>
               </div>
-              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-mono px-2 py-0.5 rounded-full">
-                Liberando...
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-mono px-2 py-0.5 rounded-full font-bold">
+                Liberando Acesso...
               </span>
             </div>
           )}
 
           <p className="text-[11px] text-slate-400 text-center mt-3 max-w-xs">
-            Posicione seu rosto dentro do círculo e clique em{' '}
-            <strong className="text-white">Validar Biometria</strong> para desbloquear seu acesso.
+            Posicione seu rosto dentro do círculo com boa iluminação e clique em{' '}
+            <strong className="text-white">Validar Biometria</strong>.
           </p>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-2.5 w-full mt-5">
+          <div className="flex items-center gap-2.5 w-full mt-4">
             {capturedPhoto && !matchResult?.isMatch ? (
               <button
                 type="button"
                 onClick={startCamera}
-                className="flex-1 py-3 px-4 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-200 text-xs font-bold flex items-center justify-center gap-1.5"
+                className="flex-1 py-3 px-4 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-all"
               >
                 <RefreshCw className="w-4 h-4" />
                 Tentar Novamente

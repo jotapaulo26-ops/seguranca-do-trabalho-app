@@ -50,6 +50,38 @@ userRoutes.put('/:id/approve', authenticateToken, requirePermission('users', 'ma
     role_id: role.id
   });
 
+  // Sincronização automática com db.employees
+  const allEmployees = db.employees.find();
+  const existingEmp = allEmployees.find(
+    e => e.id === user.id || e.email.toLowerCase() === user.email.toLowerCase()
+  );
+
+  if (existingEmp) {
+    db.employees.update(existingEmp.id, {
+      name: user.name,
+      role: role.name,
+      department: user.department || existingEmp.department,
+      photo_url: user.photo_url || existingEmp.photo_url,
+      phone: user.phone || existingEmp.phone,
+      status: 'ativo'
+    });
+  } else {
+    db.employees.create({
+      id: user.id,
+      name: user.name,
+      cpf: '',
+      registration_number: `REG-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
+      role: role.name,
+      department: user.department || 'Geral',
+      admission_date: new Date().toISOString().split('T')[0],
+      phone: user.phone || '',
+      email: user.email,
+      photo_url: user.photo_url,
+      status: 'ativo',
+      created_at: new Date().toISOString()
+    });
+  }
+
   logAudit(
     req,
     'APROVAR_CADASTRO',
@@ -61,6 +93,33 @@ userRoutes.put('/:id/approve', authenticateToken, requirePermission('users', 'ma
     message: `Cadastro de ${user.name} aprovado com sucesso!`,
     user: updated
   });
+});
+
+// Update facial biometrics for user and corresponding employee
+userRoutes.put('/:id/biometrics', authenticateToken, requirePermission('users', 'manage'), (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { photo_url } = req.body;
+
+  if (!photo_url || typeof photo_url !== 'string') {
+    return res.status(400).json({ error: 'Foto facial em formato base64/dataURL é obrigatória.' });
+  }
+
+  const user = db.users.findById(id);
+  if (!user) {
+    return res.status(404).json({ error: 'Usuário não encontrado.' });
+  }
+
+  db.users.update(id, { photo_url });
+
+  // Sincroniza com funcionário correspondente
+  const emp = db.employees.findById(id) || db.employees.find().find(e => e.email.toLowerCase() === user.email.toLowerCase());
+  if (emp) {
+    db.employees.update(emp.id, { photo_url });
+  }
+
+  logAudit(req, 'ATUALIZAR_BIOMETRIA', 'USUARIOS', `Nova biometria facial registrada para ${user.name}`);
+
+  return res.json({ success: true, message: `Biometria facial de ${user.name} atualizada com sucesso!` });
 });
 
 // Reject user registration
@@ -125,10 +184,10 @@ userRoutes.post('/', authenticateToken, requirePermission('users', 'manage'), (r
   return res.status(201).json(safeUser);
 });
 
-// Update user (change role, status, name, or reset password)
+// Update user (change role, status, name, department, phone, or reset password)
 userRoutes.put('/:id', authenticateToken, requirePermission('users', 'manage'), (req: Request, res: Response) => {
   const { id } = req.params;
-  const { name, role_id, active, newPassword } = req.body;
+  const { name, role_id, active, department, phone, photo_url, newPassword } = req.body;
 
   const user = db.users.findById(id);
   if (!user) {
@@ -137,6 +196,9 @@ userRoutes.put('/:id', authenticateToken, requirePermission('users', 'manage'), 
 
   const updates: Partial<User> = {};
   if (name) updates.name = name.trim();
+  if (department !== undefined) updates.department = department.trim();
+  if (phone !== undefined) updates.phone = phone.trim();
+  if (photo_url) updates.photo_url = photo_url;
   if (role_id) {
     const role = db.roles.findById(role_id);
     if (!role) return res.status(400).json({ error: 'Perfil inválido.' });
@@ -151,6 +213,21 @@ userRoutes.put('/:id', authenticateToken, requirePermission('users', 'manage'), 
   }
 
   const updated = db.users.update(id, updates);
+
+  // Sync updates with employee record
+  const emp = db.employees.findById(id) || db.employees.find().find(e => e.email.toLowerCase() === user.email.toLowerCase());
+  if (emp) {
+    const roleName = updates.role_id ? db.roles.findById(updates.role_id)?.name : undefined;
+    db.employees.update(emp.id, {
+      ...(updates.name ? { name: updates.name } : {}),
+      ...(roleName ? { role: roleName } : {}),
+      ...(updates.department ? { department: updates.department } : {}),
+      ...(updates.phone ? { phone: updates.phone } : {}),
+      ...(updates.photo_url ? { photo_url: updates.photo_url } : {}),
+      ...(updates.active !== undefined ? { status: updates.active === 1 ? 'ativo' : 'desligado' } : {})
+    });
+  }
+
   logAudit(req, 'EDITAR_USUARIO', 'USUARIOS', `Dados do usuário ${user.name} atualizados pelo admin`);
 
   return res.json(updated);

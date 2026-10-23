@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Role, User } from '../types';
+import { FrontalCameraModal } from '../components/FrontalCameraModal';
 import {
   Shield,
   Users,
@@ -61,10 +62,14 @@ export const UsersAndRolesPage: React.FC = () => {
 
   // Modal states for User
   const [userModalOpen, setUserModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [userPassword, setUserPassword] = useState('');
   const [userRoleId, setUserRoleId] = useState('');
+  const [userDepartment, setUserDepartment] = useState('');
+  const [userPhone, setUserPhone] = useState('');
+  const [faceCaptureUser, setFaceCaptureUser] = useState<User | null>(null);
 
   const loadData = async () => {
     try {
@@ -171,28 +176,70 @@ export const UsersAndRolesPage: React.FC = () => {
   };
 
   // --- USER ACTIONS ---
-  const handleCreateUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!userName || !userEmail || !userPassword || !userRoleId) {
-      alert('Preencha todos os campos para cadastrar o usuário.');
-      return;
-    }
+  const openCreateUserModal = () => {
+    setEditingUser(null);
+    setUserName('');
+    setUserEmail('');
+    setUserPassword('');
+    setUserRoleId(roles[0]?.id || '');
+    setUserDepartment('');
+    setUserPhone('');
+    setUserModalOpen(true);
+  };
 
+  const openEditUserModal = (u: User) => {
+    setEditingUser(u);
+    setUserName(u.name);
+    setUserEmail(u.email);
+    setUserRoleId(u.role_id);
+    setUserDepartment(u.department || '');
+    setUserPhone(u.phone || '');
+    setUserPassword('');
+    setUserModalOpen(true);
+  };
+
+  const handleSaveUser = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
-      await api.post('/users', {
-        name: userName.trim(),
-        email: userEmail.trim(),
-        password: userPassword,
-        role_id: userRoleId
-      });
+      if (editingUser) {
+        await api.put(`/users/${editingUser.id}`, {
+          name: userName.trim(),
+          role_id: userRoleId,
+          department: userDepartment.trim(),
+          phone: userPhone.trim(),
+          ...(userPassword ? { newPassword: userPassword } : {})
+        });
+      } else {
+        if (!userName || !userEmail || !userPassword || !userRoleId) {
+          alert('Preencha todos os campos obrigatórios.');
+          return;
+        }
+        await api.post('/users', {
+          name: userName.trim(),
+          email: userEmail.trim(),
+          password: userPassword,
+          role_id: userRoleId,
+          department: userDepartment.trim(),
+          phone: userPhone.trim()
+        });
+      }
       setUserModalOpen(false);
-      setUserName('');
-      setUserEmail('');
-      setUserPassword('');
-      setUserRoleId('');
+      setEditingUser(null);
       loadData();
     } catch (err: any) {
-      alert(err.message || 'Erro ao cadastrar usuário.');
+      alert(err.message || 'Erro ao salvar usuário.');
+    }
+  };
+
+  const handleSaveUserBiometrics = async (compressedDataUrl: string) => {
+    if (!faceCaptureUser) return;
+    try {
+      await api.put(`/users/${faceCaptureUser.id}/biometrics`, { photo_url: compressedDataUrl });
+      loadData();
+      setFaceCaptureUser(null);
+      alert(`Biometria facial de ${faceCaptureUser.name} recadastrada com sucesso!`);
+    } catch (err: any) {
+      alert('Erro ao atualizar biometria: ' + (err.message || 'Falha de comunicação.'));
     }
   };
 
@@ -275,10 +322,7 @@ export const UsersAndRolesPage: React.FC = () => {
         ) : (
           can('users', 'manage') && (
             <button
-              onClick={() => {
-                setUserRoleId(roles[0]?.id || '');
-                setUserModalOpen(true);
-              }}
+              onClick={openCreateUserModal}
               className="py-2.5 px-4 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl flex items-center gap-2 shadow-md shadow-amber-500/20 transition-all hover:scale-[1.02]"
             >
               <Plus className="w-4 h-4" />
@@ -400,27 +444,70 @@ export const UsersAndRolesPage: React.FC = () => {
             {users.map(u => (
               <div key={u.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-slate-900 text-amber-400 font-bold flex items-center justify-center text-sm shrink-0">
-                    {u.name.charAt(0).toUpperCase()}
-                  </div>
+                  {/* Photo or Initials */}
+                  {u.photo_url ? (
+                    <img
+                      src={u.photo_url}
+                      alt={u.name}
+                      onClick={() => setPreviewPhotoUrl(u.photo_url || null)}
+                      className="w-12 h-12 rounded-2xl object-cover border-2 border-slate-200 shadow-sm cursor-pointer hover:scale-105 transition-transform shrink-0"
+                      title="Clique para ampliar foto biométrica"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-2xl bg-slate-900 text-amber-400 font-bold flex items-center justify-center text-sm shrink-0">
+                      {u.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+
                   <div>
                     <h4 className="font-bold text-slate-900 text-sm leading-tight">{u.name}</h4>
                     <p className="text-xs text-slate-500">{u.email}</p>
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
                       <span className="text-[10px] bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded-full">
                         {u.role_name}
                       </span>
-                      {u.device_id && (
-                        <span className="text-[9px] font-mono text-slate-400 flex items-center gap-1">
-                          <Smartphone className="w-3 h-3 text-slate-400" />
-                          {u.device_id}
+                      {u.department && (
+                        <span className="text-[10px] bg-slate-100 text-slate-600 font-medium px-2 py-0.5 rounded-md">
+                          {u.department}
+                        </span>
+                      )}
+                      {u.phone && (
+                        <span className="text-[10px] text-slate-500 font-mono">
+                          {u.phone}
                         </span>
                       )}
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
+                  {can('users', 'manage') && (
+                    <button
+                      onClick={() => setFaceCaptureUser(u)}
+                      className={`p-2 rounded-xl border text-xs font-semibold flex items-center gap-1 transition-all ${
+                        u.photo_url
+                          ? 'text-teal-700 bg-teal-50 border-teal-200 hover:bg-teal-100'
+                          : 'text-amber-700 bg-amber-50 border-amber-200 hover:bg-amber-100'
+                      }`}
+                      title={u.photo_url ? 'Recadastrar Biometria Facial' : 'Cadastrar Biometria Facial'}
+                    >
+                      <Camera className="w-4 h-4" />
+                      <span className="hidden md:inline text-[11px]">
+                        {u.photo_url ? 'Recadastrar Face' : 'Cadastrar Face'}
+                      </span>
+                    </button>
+                  )}
+
+                  {can('users', 'manage') && (
+                    <button
+                      onClick={() => openEditUserModal(u)}
+                      className="p-2 text-slate-500 hover:text-slate-800 rounded-xl hover:bg-slate-100 transition-colors"
+                      title="Editar Informações"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                  )}
+
                   <button
                     onClick={() => handleToggleUserActive(u)}
                     className={`py-1.5 px-3 rounded-xl text-xs font-bold transition-colors ${
@@ -685,12 +772,14 @@ export const UsersAndRolesPage: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL: CREATE USER */}
+      {/* MODAL: CREATE / EDIT USER */}
       {userModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-              <h3 className="font-extrabold text-slate-900 text-base">Cadastrar Novo Usuário</h3>
+              <h3 className="font-extrabold text-slate-900 text-base">
+                {editingUser ? `Editar Usuário: ${editingUser.name}` : 'Cadastrar Novo Usuário'}
+              </h3>
               <button
                 onClick={() => setUserModalOpen(false)}
                 className="p-1.5 text-slate-400 hover:text-slate-600"
@@ -699,7 +788,7 @@ export const UsersAndRolesPage: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleCreateUser} className="space-y-4">
+            <form onSubmit={handleSaveUser} className="space-y-3.5">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Nome Completo *</label>
                 <input
@@ -719,20 +808,48 @@ export const UsersAndRolesPage: React.FC = () => {
                   value={userEmail}
                   onChange={(e) => setUserEmail(e.target.value)}
                   placeholder="maria.santos@empresa.com.br"
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500"
+                  disabled={!!editingUser}
+                  className={`w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 ${
+                    editingUser ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : ''
+                  }`}
                   required
                 />
               </div>
 
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Setor / Área</label>
+                  <input
+                    type="text"
+                    value={userDepartment}
+                    onChange={(e) => setUserDepartment(e.target.value)}
+                    placeholder="Ex: Manutenção"
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Telefone / Whats</label>
+                  <input
+                    type="text"
+                    value={userPhone}
+                    onChange={(e) => setUserPhone(e.target.value)}
+                    placeholder="(17) 99999-9999"
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
+
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Senha de Acesso *</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  {editingUser ? 'Nova Senha (deixe vazio para manter)' : 'Senha de Acesso *'}
+                </label>
                 <input
                   type="password"
                   value={userPassword}
                   onChange={(e) => setUserPassword(e.target.value)}
                   placeholder="••••••••"
                   className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500"
-                  required
+                  required={!editingUser}
                 />
               </div>
 
@@ -752,6 +869,29 @@ export const UsersAndRolesPage: React.FC = () => {
                 </select>
               </div>
 
+              {/* Action to update biometrics */}
+              {editingUser && (
+                <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-2xl flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-slate-900 block">Biometria Facial</span>
+                    <span className="text-[11px] text-slate-500">
+                      {editingUser.photo_url ? 'Foto biométrica registrada' : 'Aguardando captura'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFaceCaptureUser(editingUser);
+                      setUserModalOpen(false);
+                    }}
+                    className="py-1.5 px-3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-sm transition-all"
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                    Tirar Nova Foto
+                  </button>
+                </div>
+              )}
+
               <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
                 <button
                   type="button"
@@ -764,12 +904,23 @@ export const UsersAndRolesPage: React.FC = () => {
                   type="submit"
                   className="py-2.5 px-5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl shadow-md transition-colors"
                 >
-                  Cadastrar Usuário
+                  {editingUser ? 'Salvar Alterações' : 'Cadastrar Usuário'}
                 </button>
               </div>
             </form>
           </div>
         </div>
+      )}
+
+      {/* MODAL: FRONTAL CAMERA FOR USER BIOMETRIC CAPTURE */}
+      {faceCaptureUser && (
+        <FrontalCameraModal
+          isOpen={!!faceCaptureUser}
+          title="Recadastrar Biometria Facial"
+          workerName={faceCaptureUser.name}
+          onClose={() => setFaceCaptureUser(null)}
+          onCapture={handleSaveUserBiometrics}
+        />
       )}
     </div>
   );

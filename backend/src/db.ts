@@ -1133,6 +1133,29 @@ export function initDatabase(): void {
     if (!u.approval_status) {
       u.approval_status = 'aprovado';
     }
+    // Auto-sync approved users to employees
+    if (u.approval_status === 'aprovado' || u.active === 1) {
+      const exists = (memoryDb.employees || []).some(
+        e => e.id === u.id || (e.email && e.email.toLowerCase() === u.email.toLowerCase())
+      );
+      if (!exists) {
+        const role = (memoryDb.roles || []).find(r => r.id === u.role_id);
+        memoryDb.employees.push({
+          id: u.id,
+          name: u.name,
+          cpf: '',
+          registration_number: `REG-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
+          role: role ? role.name : u.role_id || 'Colaborador',
+          department: u.department || 'Usina Santa Isabel',
+          admission_date: new Date().toISOString().split('T')[0],
+          phone: u.phone || '',
+          email: u.email,
+          photo_url: u.photo_url || '',
+          status: 'ativo',
+          created_at: u.created_at || new Date().toISOString()
+        });
+      }
+    }
   });
 
   (memoryDb.risk_locations || []).forEach(r => {

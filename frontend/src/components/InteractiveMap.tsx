@@ -63,24 +63,28 @@ const currentUserIcon = L.divIcon({
 
 // Custom Icon for Teammates (Colored pill by role)
 function createTeammateIcon(user: ActiveUserLocation) {
-  let badgeColor = 'bg-blue-600 border-blue-800';
+  let badgeColor = user.isOnline !== false ? 'bg-blue-600 border-blue-800' : 'bg-slate-700 border-slate-900';
   let roleIcon = '👷';
 
   if (user.roleType === 'brigadista') {
-    badgeColor = 'bg-red-600 border-red-800';
+    badgeColor = user.isOnline !== false ? 'bg-red-600 border-red-800' : 'bg-rose-900 border-rose-950';
     roleIcon = '🧯';
   } else if (user.roleType === 'sst') {
-    badgeColor = 'bg-amber-600 border-amber-800';
+    badgeColor = user.isOnline !== false ? 'bg-amber-600 border-amber-800' : 'bg-amber-800 border-amber-950';
     roleIcon = '🛡️';
   }
 
   const firstName = user.name.split(' ')[0];
+  const statusDot = user.isOnline !== false
+    ? `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>`
+    : `<span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>`;
 
   return L.divIcon({
     className: 'custom-teammate-gps-marker',
     html: `
       <div class="flex flex-col items-center cursor-pointer transition-transform hover:scale-110">
         <div class="px-2 py-0.5 rounded-full text-[10px] font-black text-white ${badgeColor} shadow-lg border border-white/80 whitespace-nowrap flex items-center gap-1">
+          ${statusDot}
           <span>${roleIcon}</span>
           <span>${firstName}</span>
         </div>
@@ -480,24 +484,47 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
               >
                 <Popup maxWidth={280}>
                   <div className="p-1">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <span className={`w-2 h-2 rounded-full ${tm.roleType === 'brigadista' ? 'bg-red-500' : 'bg-amber-500'}`}></span>
-                      <span className="text-[10px] font-black uppercase text-slate-500">
-                        {tm.roleType === 'brigadista' ? 'Brigadista' : tm.roleType === 'sst' ? 'Equipe SST' : 'Executante'}
+                    <div className="flex items-center justify-between gap-1.5 mb-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`w-2 h-2 rounded-full ${tm.isOnline !== false ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></span>
+                        <span className="text-[10px] font-black uppercase text-slate-500">
+                          {tm.isOnline !== false ? '🟢 GPS Ao Vivo' : '⚪ Offline / Usina'}
+                        </span>
+                      </div>
+                      <span className="text-[9px] bg-slate-100 font-bold px-1.5 py-0.5 rounded text-slate-600">
+                        {tm.roleType === 'brigadista' ? 'Brigada' : tm.roleType === 'sst' ? 'SST' : 'Operações'}
                       </span>
                     </div>
 
-                    <h4 className="font-black text-sm text-slate-900">{tm.name}</h4>
-                    <p className="text-xs text-slate-600 font-medium">{tm.roleName}</p>
+                    <div className="flex items-center gap-2.5 mb-2">
+                      {tm.photo_url ? (
+                        <img
+                          src={tm.photo_url}
+                          alt={tm.name}
+                          className="w-10 h-10 rounded-xl object-cover border border-slate-200 shrink-0 shadow-sm"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center font-bold text-xs shrink-0">
+                          👷
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <h4 className="font-black text-xs text-slate-900 truncate">{tm.name}</h4>
+                        <p className="text-[11px] text-slate-600 font-medium truncate">{tm.roleName}</p>
+                        {tm.department && (
+                          <p className="text-[10px] text-slate-400 truncate">{tm.department}</p>
+                        )}
+                      </div>
+                    </div>
 
-                    {distance !== null && (
-                      <div className="mt-2 text-xs font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded-lg">
+                    {distance !== null && tm.isOnline !== false && (
+                      <div className="mb-2 text-xs font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded-lg">
                         📍 A {distance} metros de você
                       </div>
                     )}
 
-                    <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-                      <span>Atualizado há segundos</span>
+                    <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                      <span>{tm.isOnline !== false ? 'Tempo Real' : 'Posto Usina Santa Isabel'}</span>
                       {tm.phone && (
                         <a
                           href={`tel:${tm.phone}`}

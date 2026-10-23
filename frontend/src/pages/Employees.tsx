@@ -269,15 +269,10 @@ export const Employees: React.FC = () => {
           </p>
         </div>
 
-        {can('employees', 'create') && (
-          <button
-            onClick={openCreateModal}
-            className="py-2.5 px-4 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl flex items-center gap-2 shadow-md shadow-amber-500/20 transition-all hover:scale-[1.02]"
-          >
-            <UserPlus className="w-4 h-4" />
-            Novo Funcionário
-          </button>
-        )}
+        <div className="bg-amber-50 border border-amber-200 px-3.5 py-2 rounded-2xl flex items-center gap-2 text-xs text-amber-900 font-medium">
+          <Camera className="w-4 h-4 text-amber-600 shrink-0" />
+          <span>Colaboradores integrados via Auto-Cadastro com Biometria Facial</span>
+        </div>
       </div>
 
       {/* Filter and Search Bar */}
@@ -611,6 +606,42 @@ export const Employees: React.FC = () => {
                   className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500"
                 />
               </div>
+
+              {/* Recadastrar Biometria Facial */}
+              {editingEmployee && (
+                <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-2xl flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {editingEmployee.photo_url ? (
+                      <img
+                        src={editingEmployee.photo_url}
+                        alt={editingEmployee.name}
+                        className="w-12 h-12 rounded-xl object-cover border-2 border-emerald-500 shadow-sm"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-xl bg-slate-200 text-slate-500 flex items-center justify-center font-bold text-xs">
+                        Sem Foto
+                      </div>
+                    )}
+                    <div>
+                      <span className="text-xs font-bold text-slate-900 block">Biometria Facial</span>
+                      <span className="text-[11px] text-slate-500">
+                        {editingEmployee.photo_url ? 'Foto biométrica ativa' : 'Pendente de captura'}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFaceCaptureEmployee(editingEmployee);
+                      setEmployeeModalOpen(false);
+                    }}
+                    className="py-2 px-3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all shadow-sm"
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                    Tirar Nova Foto
+                  </button>
+                </div>
+              )}
 
               <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
                 <button

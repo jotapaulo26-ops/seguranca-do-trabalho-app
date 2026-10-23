@@ -363,6 +363,8 @@ export interface ActiveUserLocation {
   roleType: 'brigadista' | 'sst' | 'executante' | 'admin';
   phone?: string;
   department?: string;
+  photo_url?: string;
+  isOnline?: boolean;
   lat: number;
   lng: number;
   accuracy?: number;
