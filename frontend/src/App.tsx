@@ -16,6 +16,7 @@ const DocumentCreatePage = React.lazy(() => import('./pages/DocumentCreatePage')
 const UsersAndRolesPage = React.lazy(() => import('./pages/UsersAndRolesPage').then((m) => ({ default: m.UsersAndRolesPage })));
 const AuditLogsPage = React.lazy(() => import('./pages/AuditLogsPage').then((m) => ({ default: m.AuditLogsPage })));
 const SettingsPage = React.lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })));
+const DataUsagePage = React.lazy(() => import('./pages/DataUsagePage').then((m) => ({ default: m.DataUsagePage })));
 const PublicSignaturePage = React.lazy(() => import('./pages/PublicSignaturePage').then((m) => ({ default: m.PublicSignaturePage })));
 const QRDispatcherPage = React.lazy(() => import('./pages/QRDispatcherPage').then((m) => ({ default: m.QRDispatcherPage })));
 
@@ -74,6 +75,7 @@ export function App() {
                   <Route path="documentos/nova-apr" element={<DocumentCreatePage />} />
                   <Route path="usuarios" element={<UsersAndRolesPage />} />
                   <Route path="auditoria" element={<AuditLogsPage />} />
+                  <Route path="dados" element={<DataUsagePage />} />
                   <Route path="configuracoes" element={<SettingsPage />} />
                 </Route>
 

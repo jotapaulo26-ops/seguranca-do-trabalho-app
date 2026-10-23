@@ -12,6 +12,7 @@ import {
   Shield,
   FileCheck,
   Settings,
+  Database,
   LogOut,
   Menu,
   X,
@@ -86,6 +87,12 @@ export const Layout: React.FC = () => {
     { label: 'Documentos & APRs', path: '/documentos', icon: FileText, show: can('documents', 'view') },
     { label: 'Perfis & Acessos', path: '/usuarios', icon: Shield, show: can('users', 'view') || can('roles', 'view') },
     { label: 'Auditoria de Ações', path: '/auditoria', icon: FileCheck, show: can('audit', 'view') },
+    {
+      label: 'Dados',
+      path: '/dados',
+      icon: Database,
+      show: user?.roleId === 'role_admin' || user?.roleName?.toLowerCase() === 'administrador' || user?.email === 'admin@segtrabalho.com.br'
+    },
     { label: 'Configurações', path: '/configuracoes', icon: Settings, show: can('settings', 'view') }
   ];
 

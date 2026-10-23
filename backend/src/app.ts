@@ -17,6 +17,7 @@ import { uploadRoutes } from './routes/uploadRoutes.js';
 import { brigadeRoutes } from './routes/brigadeRoutes.js';
 import { publicRoutes } from './routes/publicRoutes.js';
 import { trackingRoutes } from './routes/trackingRoutes.js';
+import { dataUsageRoutes } from './routes/dataUsageRoutes.js';
 
 dotenv.config();
 
@@ -61,5 +62,6 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/brigade', brigadeRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/tracking', trackingRoutes);
+app.use('/api/system', dataUsageRoutes);
 
 export default app;

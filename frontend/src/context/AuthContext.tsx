@@ -9,6 +9,7 @@ export interface AuthUser {
   roleId: string;
   roleName: string;
   permissions: Record<string, string[]>;
+  photo_url?: string;
 }
 
 interface AuthContextType {

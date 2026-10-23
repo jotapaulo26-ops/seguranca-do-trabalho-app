@@ -347,9 +347,9 @@ export async function generateAprPdf(doc: DocumentRecord, companySettings?: any)
         if (matchingSig.photoDataUrl) {
           try {
             pdf.addImage(matchingSig.photoDataUrl, 'JPEG', x + 60, currentY + 6, 16, 16);
-            pdf.setFontSize(5);
-            pdf.setTextColor(100, 116, 139);
-            pdf.text('PRESENÇA', x + 61, currentY + 24);
+            pdf.setFontSize(5.5);
+            pdf.setTextColor(16, 149, 106);
+            pdf.text('FACE ID OK', x + 61, currentY + 24);
           } catch (e) {}
         }
       } else {

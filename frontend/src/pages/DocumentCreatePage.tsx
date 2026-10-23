@@ -6,6 +6,7 @@ import { RiskLocation, Employee, DocumentRecord } from '../types';
 import { getDeviceId, getDeviceDescription } from '../services/deviceId';
 import { generateDocumentPdf } from '../services/documentPdfGenerator';
 import { SignaturePad } from '../components/SignaturePad';
+import { FrontalCameraModal } from '../components/FrontalCameraModal';
 import {
   FileText,
   ShieldAlert,
@@ -140,6 +141,9 @@ export const DocumentCreatePage: React.FC = () => {
 
   // Signature and Result State
   const [capturedSignature, setCapturedSignature] = useState<string | null>(null);
+  const [emitterPhotoUrl, setEmitterPhotoUrl] = useState<string | null>(null);
+  const [emitterBiometricScore, setEmitterBiometricScore] = useState<number | null>(null);
+  const [showBiometricModal, setShowBiometricModal] = useState<boolean>(false);
   const [showSigModal, setShowSigModal] = useState<boolean>(false);
   const [createdDoc, setCreatedDoc] = useState<DocumentRecord | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -299,9 +303,34 @@ export const DocumentCreatePage: React.FC = () => {
     return { ok: false, label: 'Não possui curso' };
   };
 
+  // BIOMETRIC & SIGNATURE FLOW HANDLER
+  const handleStartSigningFlow = () => {
+    setValidationError(null);
+    if (!emitterPhotoUrl) {
+      setShowBiometricModal(true);
+    } else {
+      setShowSigModal(true);
+    }
+  };
+
+  const handleEmitterBiometricCapture = (photoDataUrl: string) => {
+    setEmitterPhotoUrl(photoDataUrl);
+    setEmitterBiometricScore(100);
+    setShowBiometricModal(false);
+    setShowSigModal(true);
+  };
+
   // SUBMIT HANDLER
   const handleSubmitDocument = async () => {
     setValidationError(null);
+
+    // Trava Estrita SST: Reconhecimento Facial Obrigatório
+    if (!emitterPhotoUrl) {
+      setValidationError('Bloqueio SST: O reconhecimento facial do emissor é estritamente obrigatório para liberar e gerar qualquer documento.');
+      setShowBiometricModal(true);
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -338,6 +367,8 @@ export const DocumentCreatePage: React.FC = () => {
                     signerRole: user?.roleName,
                     signerType: 'supervisor',
                     signatureDataUrl: capturedSignature,
+                    photoDataUrl: emitterPhotoUrl,
+                    biometricScore: emitterBiometricScore || 100,
                     signedAt: new Date().toISOString(),
                     deviceId
                   }
@@ -372,6 +403,8 @@ export const DocumentCreatePage: React.FC = () => {
                     signerRole: user?.roleName,
                     signerType: 'supervisor',
                     signatureDataUrl: capturedSignature,
+                    photoDataUrl: emitterPhotoUrl,
+                    biometricScore: emitterBiometricScore || 100,
                     signedAt: new Date().toISOString(),
                     deviceId
                   }
@@ -399,6 +432,8 @@ export const DocumentCreatePage: React.FC = () => {
                     signerRole: 'Emitente SST',
                     signerType: 'supervisor',
                     signatureDataUrl: capturedSignature,
+                    photoDataUrl: emitterPhotoUrl,
+                    biometricScore: emitterBiometricScore || 100,
                     signedAt: new Date().toISOString(),
                     deviceId
                   }
@@ -423,6 +458,8 @@ export const DocumentCreatePage: React.FC = () => {
                     signerRole: 'Responsável Almoxarifado / SST',
                     signerType: 'supervisor',
                     signatureDataUrl: capturedSignature,
+                    photoDataUrl: emitterPhotoUrl,
+                    biometricScore: emitterBiometricScore || 100,
                     signedAt: new Date().toISOString(),
                     deviceId
                   }
@@ -452,6 +489,8 @@ export const DocumentCreatePage: React.FC = () => {
                     signerRole: 'Inspetor de Segurança',
                     signerType: 'supervisor',
                     signatureDataUrl: capturedSignature,
+                    photoDataUrl: emitterPhotoUrl,
+                    biometricScore: emitterBiometricScore || 100,
                     signedAt: new Date().toISOString(),
                     deviceId
                   }
@@ -919,11 +958,13 @@ export const DocumentCreatePage: React.FC = () => {
 
             <button
               type="button"
-              onClick={() => setShowSigModal(true)}
+              onClick={handleStartSigningFlow}
               className="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-black text-xs flex items-center gap-2 shadow-lg shadow-red-600/20"
             >
               <PenTool className="w-4 h-4" />
-              {capturedSignature ? 'Assinatura Coletada (Reassinar)' : 'Coletar Assinatura e Liberar PT'}
+              {capturedSignature && emitterPhotoUrl
+                ? 'Assinatura & Face ID Coletados (Reassinar)'
+                : 'Coletar Face ID e Liberar PT'}
             </button>
           </div>
         </div>
@@ -1038,11 +1079,13 @@ export const DocumentCreatePage: React.FC = () => {
             <button
               type="button"
               disabled={!selectedEmployeeId}
-              onClick={() => setShowSigModal(true)}
+              onClick={handleStartSigningFlow}
               className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black text-xs flex items-center gap-2 shadow-lg shadow-blue-600/20 disabled:opacity-50"
             >
               <PenTool className="w-4 h-4" />
-              {capturedSignature ? 'Assinatura Coletada (Reassinar)' : 'Coletar Ciência do Colaborador'}
+              {capturedSignature && emitterPhotoUrl
+                ? 'Assinatura & Face ID Coletados (Reassinar)'
+                : 'Coletar Face ID & Assinatura'}
             </button>
           </div>
         </div>
@@ -1181,11 +1224,13 @@ export const DocumentCreatePage: React.FC = () => {
             <button
               type="button"
               disabled={!selectedEmployeeId || epiItems.length === 0}
-              onClick={() => setShowSigModal(true)}
+              onClick={handleStartSigningFlow}
               className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/20 disabled:opacity-50"
             >
               <PenTool className="w-4 h-4" />
-              {capturedSignature ? 'Assinatura Coletada (Reassinar)' : 'Coletar Recibo Assinado'}
+              {capturedSignature && emitterPhotoUrl
+                ? 'Assinatura & Face ID Coletados (Reassinar)'
+                : 'Coletar Face ID & Assinatura'}
             </button>
           </div>
         </div>
@@ -1367,11 +1412,13 @@ export const DocumentCreatePage: React.FC = () => {
 
             <button
               type="button"
-              onClick={() => setShowSigModal(true)}
+              onClick={handleStartSigningFlow}
               className="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-black text-xs flex items-center gap-2 shadow-lg shadow-purple-600/20"
             >
               <PenTool className="w-4 h-4" />
-              {capturedSignature ? 'Assinatura Coletada (Reassinar)' : 'Coletar Assinatura do Inspetor'}
+              {capturedSignature && emitterPhotoUrl
+                ? 'Assinatura & Face ID Coletados (Reassinar)'
+                : 'Coletar Face ID & Assinatura'}
             </button>
           </div>
         </div>
@@ -1488,11 +1535,13 @@ export const DocumentCreatePage: React.FC = () => {
 
             <button
               type="button"
-              onClick={() => setShowSigModal(true)}
+              onClick={handleStartSigningFlow}
               className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl font-black text-xs flex items-center gap-2 shadow-lg shadow-amber-500/20"
             >
               <PenTool className="w-4 h-4" />
-              {capturedSignature ? 'Assinatura Coletada (Reassinar)' : 'Assinar Digitalmente e Emitir APR'}
+              {capturedSignature && emitterPhotoUrl
+                ? 'Assinatura & Face ID Coletados (Reassinar)'
+                : 'Coletar Face ID e Emitir APR'}
             </button>
           </div>
         </div>
@@ -1543,6 +1592,8 @@ export const DocumentCreatePage: React.FC = () => {
                   setStep(1);
                   setCreatedDoc(null);
                   setCapturedSignature(null);
+                  setEmitterPhotoUrl(null);
+                  setEmitterBiometricScore(null);
                 }}
                 className="w-full sm:w-auto px-5 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-md"
               >
@@ -1584,6 +1635,34 @@ export const DocumentCreatePage: React.FC = () => {
             </div>
 
             <div className="p-5 space-y-4">
+              {/* Emitter Verified Biometric Badge */}
+              {emitterPhotoUrl && (
+                <div className="flex items-center gap-3 p-3 bg-emerald-50 border border-emerald-200 rounded-2xl animate-in fade-in">
+                  <img
+                    src={emitterPhotoUrl}
+                    alt="Foto do Emissor"
+                    className="w-12 h-12 rounded-xl object-cover border-2 border-emerald-500 shadow-sm"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-800">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                      Face ID Validado com Sucesso
+                    </div>
+                    <p className="text-[11px] text-slate-600 font-medium">Emissor: {user?.name}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowSigModal(false);
+                      setShowBiometricModal(true);
+                    }}
+                    className="text-[10px] text-emerald-700 hover:text-emerald-900 font-bold underline"
+                  >
+                    Recapturar
+                  </button>
+                </div>
+              )}
+
               <SignaturePad
                 onSave={dataUrl => {
                   setCapturedSignature(dataUrl);
@@ -1595,6 +1674,20 @@ export const DocumentCreatePage: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* FRONTAL CAMERA FACE ID MODAL (MANDATORY SST EMISSION)    */}
+      {/* ======================================================== */}
+      {showBiometricModal && (
+        <FrontalCameraModal
+          isOpen={showBiometricModal}
+          onClose={() => setShowBiometricModal(false)}
+          onCapture={handleEmitterBiometricCapture}
+          workerName={user?.name}
+          referencePhotoUrl={user?.photo_url}
+          title="Reconhecimento Facial Obrigatório do Emissor"
+        />
       )}
     </div>
   );

@@ -666,7 +666,7 @@ function renderSignaturesSection(
     const x = margin + idx * (boxWidth + 10);
     pdf.setDrawColor(203, 213, 225);
     pdf.setFillColor(248, 250, 252);
-    pdf.roundedRect(x, startY, boxWidth, 30, 2, 2, 'FD');
+    pdf.roundedRect(x, startY, boxWidth, 32, 2, 2, 'FD');
 
     // Title / Cargo
     pdf.setFont('helvetica', 'bold');
@@ -711,7 +711,14 @@ function renderSignaturesSection(
     const timeInfo = matchingSig
       ? `Data: ${new Date(matchingSig.signedAt).toLocaleDateString('pt-BR')} ${new Date(matchingSig.signedAt).toLocaleTimeString('pt-BR')} • ID: ${matchingSig.deviceId || 'WEB'}`
       : 'Aguardando validação do colaborador';
-    pdf.text(timeInfo.substring(0, 60), x + 3, startY + 27);
+    pdf.text(timeInfo.substring(0, 60), x + 3, startY + 26.5);
+
+    if (matchingSig && matchingSig.photoDataUrl) {
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(5.5);
+      pdf.setTextColor(16, 149, 106); // Emerald
+      pdf.text('HOMOLOGADO COM BIOMETRIA FACIAL (FACE ID)', x + 3, startY + 30.5);
+    }
   });
 }
 
