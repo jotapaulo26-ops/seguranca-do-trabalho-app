@@ -14,7 +14,8 @@ import {
   HardHat,
   MapPin,
   Check,
-  Sparkles
+  Sparkles,
+  Clock
 } from 'lucide-react';
 
 export const PublicSignaturePage: React.FC = () => {
@@ -180,7 +181,15 @@ export const PublicSignaturePage: React.FC = () => {
     }
     const canvas = canvasRef.current;
     if (!canvas || !hasDrawn) {
-      alert('Por favor, faça sua rubrica com o dedo na tela.');
+      alert('Bloqueio SST: A rubrica desenhada no quadro é estritamente obrigatória.');
+      return;
+    }
+    if (!photoDataUrl) {
+      alert('Bloqueio SST: A selfie de presença com câmera frontal é estritamente obrigatória.');
+      return;
+    }
+    if (workerReferencePhoto && (!biometricResult || !biometricResult.isMatch)) {
+      alert('Bloqueio Biométrico SST: O rosto capturado está divergente do cadastro biométrico. Assinatura bloqueada.');
       return;
     }
 
@@ -196,7 +205,7 @@ export const PublicSignaturePage: React.FC = () => {
         signerCpf: signerCpf || undefined,
         signerType: 'executante',
         signatureDataUrl,
-        photoDataUrl: photoDataUrl || undefined
+        photoDataUrl
       });
 
       setSuccess(true);
@@ -408,10 +417,91 @@ export const PublicSignaturePage: React.FC = () => {
             )}
           </div>
 
+          {/* Checklist de Conformidade Obrigatória SST */}
+          <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-xs flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 font-medium">
+              {hasDrawn ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              ) : (
+                <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
+              )}
+              <span className={hasDrawn ? 'text-emerald-800' : 'text-slate-600'}>
+                Rubrica: <strong>{hasDrawn ? 'Preenchida' : 'Obrigatória'}</strong>
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5 font-medium">
+              {photoDataUrl ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              ) : (
+                <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
+              )}
+              <span className={photoDataUrl ? 'text-emerald-800' : 'text-slate-600'}>
+                Selfie Frontal: <strong>{photoDataUrl ? 'Capturada' : 'Obrigatória'}</strong>
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5 font-medium">
+              {workerReferencePhoto ? (
+                biometricResult?.isMatch ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                ) : biometricResult && !biometricResult.isMatch ? (
+                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 animate-pulse" />
+                ) : (
+                  <Clock className="w-4 h-4 text-amber-500 shrink-0" />
+                )
+              ) : photoDataUrl ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              ) : (
+                <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+              )}
+              <span
+                className={
+                  workerReferencePhoto && biometricResult && !biometricResult.isMatch
+                    ? 'text-rose-700 font-bold'
+                    : photoDataUrl
+                    ? 'text-emerald-800 font-semibold'
+                    : 'text-slate-600'
+                }
+              >
+                Biometria:{' '}
+                <strong>
+                  {workerReferencePhoto && biometricResult && !biometricResult.isMatch
+                    ? 'Divergente (Bloqueado)'
+                    : photoDataUrl
+                    ? 'Validada'
+                    : 'Aguardando'}
+                </strong>
+              </span>
+            </div>
+          </div>
+
+          {/* Warning Message if blocked */}
+          {(!hasDrawn || !photoDataUrl || (workerReferencePhoto && biometricResult && !biometricResult.isMatch)) && (
+            <div className="text-center text-xs text-rose-600 font-bold">
+              {!photoDataUrl
+                ? '⚠️ Tire a selfie frontal para liberar a assinatura.'
+                : workerReferencePhoto && biometricResult && !biometricResult.isMatch
+                ? '⛔ Rosto divergente da biometria. Assinatura bloqueada.'
+                : !hasDrawn
+                ? '⚠️ Desenhe sua rubrica no quadro para liberar a assinatura.'
+                : ''}
+            </div>
+          )}
+
           <button
             type="submit"
-            disabled={saving || !hasDrawn}
-            className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-black text-sm rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 transition-all hover:scale-[1.01]"
+            disabled={
+              !hasDrawn ||
+              !photoDataUrl ||
+              (workerReferencePhoto && biometricResult && !biometricResult.isMatch) ||
+              saving
+            }
+            className={`w-full py-3 px-4 font-black text-sm rounded-xl flex items-center justify-center gap-2 shadow-lg transition-all ${
+              hasDrawn && photoDataUrl && (!workerReferencePhoto || biometricResult?.isMatch) && !saving
+                ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20 hover:scale-[1.01]'
+                : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
+            }`}
           >
             <Check className="w-5 h-5" />
             {saving ? 'Gravando Assinatura...' : 'Confirmar e Assinar Documento'}

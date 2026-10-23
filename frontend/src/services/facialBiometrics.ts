@@ -144,7 +144,7 @@ export async function compareFaces(
         score: normalizedScore,
         isMatch: true,
         confidence: 'alta',
-        label: `Identidade Confirmada (${normalizedScore}%)`,
+        label: `✅ Identidade Facial Confirmada (${normalizedScore}%)`,
         color: 'emerald',
         hasReference: true
       };
@@ -153,7 +153,7 @@ export async function compareFaces(
         score: normalizedScore,
         isMatch: true,
         confidence: 'media',
-        label: `Similaridade Aceitável com EPI/Óculos (${normalizedScore}%)`,
+        label: `✅ Similaridade Aceitável com EPI/Óculos (${normalizedScore}%)`,
         color: 'amber',
         hasReference: true
       };
@@ -162,7 +162,7 @@ export async function compareFaces(
         score: normalizedScore,
         isMatch: false,
         confidence: 'baixa',
-        label: `Divergência Facial (${normalizedScore}%) — Conferir Documento`,
+        label: `⛔ Rosto Divergente do Cadastro (${normalizedScore}%) — Homologação Bloqueada`,
         color: 'rose',
         hasReference: true
       };

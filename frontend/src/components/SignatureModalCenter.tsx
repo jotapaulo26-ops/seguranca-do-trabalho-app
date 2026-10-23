@@ -91,7 +91,7 @@ export const SignatureModalCenter: React.FC<SignatureModalCenterProps> = ({
     refreshDocument();
   }, [doc.id]);
 
-  // Load worker reference biometrics when a worker is selected
+  // Load worker reference biometrics when a worker is selected and auto-open frontal camera
   useEffect(() => {
     if (!selectedWorker) {
       setHasDrawn(false);
@@ -117,6 +117,12 @@ export const SignatureModalCenter: React.FC<SignatureModalCenterProps> = ({
       }
     }
     loadWorkerBiometrics();
+
+    // Auto-open frontal camera viewfinder for fast biometric verification
+    const timer = setTimeout(() => {
+      setCameraModalOpen(true);
+    }, 250);
+    return () => clearTimeout(timer);
   }, [selectedWorker]);
 
   // Setup canvas when a worker is selected for signing
@@ -231,14 +237,43 @@ export const SignatureModalCenter: React.FC<SignatureModalCenterProps> = ({
       const result = await compareFaces(workerReferencePhoto, compressedDataUrl);
       setBiometricResult(result);
     } else {
-      setBiometricResult({
-        score: 100,
-        isMatch: true,
-        confidence: 'alta',
-        label: 'Foto pronta para registro biométrico',
-        color: 'emerald',
-        hasReference: false
-      });
+      // Colaborador ainda sem biometria -> cadastra automaticamente no ato
+      const workerId =
+        selectedWorker && !selectedWorker.id.startsWith('supervisor_') && !selectedWorker.id.startsWith('watch_')
+          ? selectedWorker.id
+          : null;
+      if (workerId) {
+        try {
+          await api.post(`/employees/${workerId}/biometrics`, { photo_url: compressedDataUrl });
+          setWorkerReferencePhoto(compressedDataUrl);
+          setBiometricResult({
+            score: 100,
+            isMatch: true,
+            confidence: 'alta',
+            label: '✅ Biometria Facial Registrada e Validada!',
+            color: 'emerald',
+            hasReference: true
+          });
+        } catch {
+          setBiometricResult({
+            score: 100,
+            isMatch: true,
+            confidence: 'alta',
+            label: '✅ Selfie Frontal Registrada',
+            color: 'emerald',
+            hasReference: false
+          });
+        }
+      } else {
+        setBiometricResult({
+          score: 100,
+          isMatch: true,
+          confidence: 'alta',
+          label: '✅ Selfie Frontal Registrada',
+          color: 'emerald',
+          hasReference: false
+        });
+      }
     }
   };
 
@@ -278,12 +313,20 @@ export const SignatureModalCenter: React.FC<SignatureModalCenterProps> = ({
     reader.readAsDataURL(file);
   };
 
-  // Save Signature for selected worker
+  // Save Signature for selected worker with strict SST safety locks
   const handleSaveSignature = async () => {
     if (!selectedWorker) return;
     const canvas = canvasRef.current;
     if (!canvas || !hasDrawn) {
-      alert('Por favor, desenhe a rubrica/assinatura no quadro antes de confirmar.');
+      alert('Bloqueio SST: A rubrica digital desenhada no quadro é estritamente obrigatória.');
+      return;
+    }
+    if (!photoDataUrl) {
+      alert('Bloqueio SST: A foto de presença com câmera frontal é estritamente obrigatória.');
+      return;
+    }
+    if (workerReferencePhoto && (!biometricResult || !biometricResult.isMatch)) {
+      alert('Bloqueio Biométrico SST: O rosto capturado está divergente da biometria cadastrada. Homologação bloqueada.');
       return;
     }
 
@@ -301,7 +344,7 @@ export const SignatureModalCenter: React.FC<SignatureModalCenterProps> = ({
           signerCpf: selectedWorker.cpf,
           signerType: selectedWorker.type,
           signatureDataUrl,
-          photoDataUrl: photoDataUrl || undefined
+          photoDataUrl
         }
       );
 
@@ -309,7 +352,7 @@ export const SignatureModalCenter: React.FC<SignatureModalCenterProps> = ({
       onSignatureSaved(res.document);
       setSelectedWorker(null);
       setPhotoDataUrl(null);
-      alert(`Assinatura de ${selectedWorker.name} registrada com sucesso!`);
+      alert(`Assinatura de ${selectedWorker.name} homologada com sucesso!`);
     } catch (err: any) {
       setErrorMessage(err.message || 'Erro ao registrar assinatura.');
     } finally {
@@ -535,24 +578,111 @@ export const SignatureModalCenter: React.FC<SignatureModalCenterProps> = ({
               )}
             </div>
 
+            {/* Checklist de Conformidade Obrigatória SST */}
+            <div className="p-3 bg-slate-100/90 rounded-2xl border border-slate-200 text-xs flex flex-wrap items-center justify-between gap-2">
+              {/* Rubrica status */}
+              <div className="flex items-center gap-1.5 font-medium">
+                {hasDrawn ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                ) : (
+                  <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
+                )}
+                <span className={hasDrawn ? 'text-emerald-800' : 'text-slate-600'}>
+                  Rubrica: <strong>{hasDrawn ? 'Preenchida' : 'Obrigatória'}</strong>
+                </span>
+              </div>
+
+              {/* Foto status */}
+              <div className="flex items-center gap-1.5 font-medium">
+                {photoDataUrl ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                ) : (
+                  <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
+                )}
+                <span className={photoDataUrl ? 'text-emerald-800' : 'text-slate-600'}>
+                  Selfie Frontal: <strong>{photoDataUrl ? 'Capturada' : 'Obrigatória'}</strong>
+                </span>
+              </div>
+
+              {/* Biometria status */}
+              <div className="flex items-center gap-1.5 font-medium">
+                {workerReferencePhoto ? (
+                  biometricResult?.isMatch ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  ) : biometricResult && !biometricResult.isMatch ? (
+                    <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 animate-pulse" />
+                  ) : (
+                    <Clock className="w-4 h-4 text-amber-500 shrink-0" />
+                  )
+                ) : photoDataUrl ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                ) : (
+                  <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                )}
+                <span
+                  className={
+                    workerReferencePhoto && biometricResult && !biometricResult.isMatch
+                      ? 'text-rose-700 font-black'
+                      : photoDataUrl
+                      ? 'text-emerald-800 font-semibold'
+                      : 'text-slate-600'
+                  }
+                >
+                  Biometria:{' '}
+                  <strong>
+                    {workerReferencePhoto && biometricResult && !biometricResult.isMatch
+                      ? 'Divergente (Bloqueado)'
+                      : photoDataUrl
+                      ? 'Validada'
+                      : 'Aguardando Foto'}
+                  </strong>
+                </span>
+              </div>
+            </div>
+
             {/* Action buttons */}
-            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => setSelectedWorker(null)}
-                className="py-2.5 px-4 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+                className="w-full sm:w-auto py-2.5 px-4 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
               >
                 Cancelar
               </button>
-              <button
-                type="button"
-                disabled={!hasDrawn || saving}
-                onClick={handleSaveSignature}
-                className="py-2.5 px-5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-black rounded-xl flex items-center gap-2 shadow-md shadow-emerald-600/20 transition-all hover:scale-[1.02]"
-              >
-                <Check className="w-4 h-4" />
-                {saving ? 'Registrando...' : 'Homologar Assinatura'}
-              </button>
+
+              <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+                {/* Impediment reason warning */}
+                {(!hasDrawn || !photoDataUrl || (workerReferencePhoto && biometricResult && !biometricResult.isMatch)) && (
+                  <span className="text-[11px] text-rose-600 font-bold text-center sm:text-right">
+                    {!photoDataUrl
+                      ? '⚠️ Tire a selfie frontal'
+                      : workerReferencePhoto && biometricResult && !biometricResult.isMatch
+                      ? '⛔ Rosto divergente (Bloqueado)'
+                      : !hasDrawn
+                      ? '⚠️ Desenhe a rubrica'
+                      : ''}
+                  </span>
+                )}
+
+                <button
+                  type="button"
+                  disabled={
+                    !hasDrawn ||
+                    !photoDataUrl ||
+                    (workerReferencePhoto && biometricResult && !biometricResult.isMatch) ||
+                    saving
+                  }
+                  onClick={handleSaveSignature}
+                  className={`w-full sm:w-auto py-2.5 px-5 rounded-xl text-xs font-black flex items-center justify-center gap-2 shadow-md transition-all ${
+                    hasDrawn && photoDataUrl && (!workerReferencePhoto || biometricResult?.isMatch) && !saving
+                      ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20 hover:scale-[1.02]'
+                      : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
+                  }`}
+                >
+                  <Check className="w-4 h-4" />
+                  {saving ? 'Registrando...' : 'Homologar Assinatura'}
+                </button>
+              </div>
             </div>
           </div>
         ) : (

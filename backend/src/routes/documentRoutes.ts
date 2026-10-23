@@ -849,8 +849,10 @@ documentRoutes.post('/:id/sign', authenticateToken, (req: Request, res: Response
   const { id } = req.params;
   const { employeeId, signerName, signerRole, signerCpf, signatureDataUrl, photoDataUrl, signerType } = req.body;
 
-  if (!signerName || !signatureDataUrl) {
-    return res.status(400).json({ error: 'Nome do signatário e rubrica digital são obrigatórios.' });
+  if (!signerName || !signatureDataUrl || !photoDataUrl) {
+    return res.status(400).json({
+      error: 'Bloqueio de Segurança SST: Tanto a rubrica digital quanto a selfie de presença facial são estritamente obrigatórias para homologação.'
+    });
   }
 
   const doc = db.documents.findById(id);
@@ -930,8 +932,10 @@ documentRoutes.post('/:id/sign-public', (req: Request, res: Response) => {
   const { id } = req.params;
   const { employeeId, signerName, signerRole, signerCpf, signatureDataUrl, photoDataUrl, signerType } = req.body;
 
-  if (!signerName || !signatureDataUrl) {
-    return res.status(400).json({ error: 'Nome do signatário e rubrica digital são obrigatórios.' });
+  if (!signerName || !signatureDataUrl || !photoDataUrl) {
+    return res.status(400).json({
+      error: 'Bloqueio de Segurança SST: Tanto a rubrica digital quanto a selfie de presença facial são estritamente obrigatórias para homologação.'
+    });
   }
 
   const doc = db.documents.findById(id);
