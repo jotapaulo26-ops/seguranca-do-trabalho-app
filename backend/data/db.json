@@ -960,6 +960,72 @@
   ],
   "audit_logs": [
     {
+      "id": "log_1792761294305_vq9pu",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "LOGIN",
+      "module": "AUTENTICACAO",
+      "details": "Login realizado com sucesso pelo dispositivo: Web",
+      "device_id": "Desconhecido",
+      "ip_address": "2804:5d80:4108:6874:4193:416:7131:6a8",
+      "created_at": "2026-10-23T13:14:54.305Z"
+    },
+    {
+      "id": "log_1792761280582_3jliw",
+      "user_id": "user_tech_01",
+      "user_name": "Carlos Mendes (Técnico SST)",
+      "action": "LOGIN",
+      "module": "AUTENTICACAO",
+      "details": "Login realizado com sucesso pelo dispositivo: Web",
+      "device_id": "Desconhecido",
+      "ip_address": "::1",
+      "created_at": "2026-10-23T13:14:40.582Z"
+    },
+    {
+      "id": "log_1792761280253_7oj4p",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "LOGIN",
+      "module": "AUTENTICACAO",
+      "details": "Login realizado com sucesso pelo dispositivo: Web",
+      "device_id": "Desconhecido",
+      "ip_address": "::1",
+      "created_at": "2026-10-23T13:14:40.253Z"
+    },
+    {
+      "id": "log_1792760446829_umu5r",
+      "user_id": "user_tech_01",
+      "user_name": "Carlos Mendes (Técnico SST)",
+      "action": "LOGIN",
+      "module": "AUTENTICACAO",
+      "details": "Login realizado com sucesso pelo dispositivo: Web",
+      "device_id": "Desconhecido",
+      "ip_address": "::1",
+      "created_at": "2026-10-23T13:00:46.830Z"
+    },
+    {
+      "id": "log_1792759644348_evren",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "LOGIN",
+      "module": "AUTENTICACAO",
+      "details": "Login realizado com sucesso pelo dispositivo: Chrome no Android Smartphone (MOB-E67A57-UNRZ)",
+      "device_id": "MOB-E67A57-UNRZ",
+      "ip_address": "2804:18:181b:9a48:20a0:89ff:fef9:133e",
+      "created_at": "2026-10-23T12:47:24.348Z"
+    },
+    {
+      "id": "log_1792759036069_0aubl",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "LOGIN",
+      "module": "AUTENTICACAO",
+      "details": "Login realizado com sucesso pelo dispositivo: Chrome no Android Smartphone (MOB-E67A57-UNRZ)",
+      "device_id": "MOB-E67A57-UNRZ",
+      "ip_address": "2804:18:181b:9a48:20a0:89ff:fef9:133e",
+      "created_at": "2026-10-23T12:37:16.069Z"
+    },
+    {
       "id": "log_1792758276771_85nta",
       "user_id": "user_admin_01",
       "user_name": "Administrador SST",

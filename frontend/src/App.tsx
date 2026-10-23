@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { TrackingProvider } from './context/TrackingContext';
 import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
@@ -37,35 +38,37 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 export function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/assinar-documento" element={<PublicSignaturePage />} />
-          <Route path="/qr" element={<QRDispatcherPage />} />
+      <TrackingProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/assinar-documento" element={<PublicSignaturePage />} />
+            <Route path="/qr" element={<QRDispatcherPage />} />
 
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <Layout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<Dashboard />} />
-            <Route path="funcionarios" element={<Employees />} />
-            <Route path="mapa" element={<RiskMapPage />} />
-            <Route path="brigada" element={<BrigadePage />} />
-            <Route path="documentos" element={<DocumentsPage />} />
-            <Route path="documentos/novo" element={<DocumentCreatePage />} />
-            <Route path="documentos/nova-apr" element={<DocumentCreatePage />} />
-            <Route path="usuarios" element={<UsersAndRolesPage />} />
-            <Route path="auditoria" element={<AuditLogsPage />} />
-            <Route path="configuracoes" element={<SettingsPage />} />
-          </Route>
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <Layout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<Dashboard />} />
+              <Route path="funcionarios" element={<Employees />} />
+              <Route path="mapa" element={<RiskMapPage />} />
+              <Route path="brigada" element={<BrigadePage />} />
+              <Route path="documentos" element={<DocumentsPage />} />
+              <Route path="documentos/novo" element={<DocumentCreatePage />} />
+              <Route path="documentos/nova-apr" element={<DocumentCreatePage />} />
+              <Route path="usuarios" element={<UsersAndRolesPage />} />
+              <Route path="auditoria" element={<AuditLogsPage />} />
+              <Route path="configuracoes" element={<SettingsPage />} />
+            </Route>
 
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </TrackingProvider>
     </AuthProvider>
   );
 }

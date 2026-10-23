@@ -9,8 +9,10 @@ import {
   BrigadeStats,
   Employee
 } from '../types';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import { useUserTracking } from '../context/TrackingContext';
+import { ActiveUserLocation } from '../types';
 import {
   Flame,
   Shield,
@@ -39,7 +41,8 @@ import {
   PhoneCall,
   Activity,
   Award,
-  Users
+  Users,
+  Navigation
 } from 'lucide-react';
 
 const USINA_SANTA_ISABEL_COORDS: [number, number] = [-21.5083, -49.2081];
@@ -93,6 +96,64 @@ function createBrigadistIcon(isOnDuty: boolean) {
   });
 }
 
+// Current User GPS Marker (Pulsing Blue)
+const currentUserGpsIcon = L.divIcon({
+  className: 'custom-current-user-gps-marker',
+  html: `
+    <div class="relative flex items-center justify-center">
+      <div class="absolute w-10 h-10 rounded-full bg-blue-500/40 animate-ping"></div>
+      <div class="relative w-6 h-6 rounded-full bg-blue-600 border-2 border-white shadow-2xl flex items-center justify-center text-white text-[10px] font-black ring-2 ring-blue-400">
+        📍
+      </div>
+    </div>
+  `,
+  iconSize: [40, 40],
+  iconAnchor: [20, 20],
+  popupAnchor: [0, -20]
+});
+
+// Teammate GPS Marker (colored pill)
+function createTeammateGpsIcon(user: ActiveUserLocation) {
+  let badgeColor = 'bg-blue-600 border-blue-800';
+  let roleIcon = '👷';
+
+  if (user.roleType === 'brigadista') {
+    badgeColor = 'bg-red-600 border-red-800';
+    roleIcon = '🧯';
+  } else if (user.roleType === 'sst') {
+    badgeColor = 'bg-amber-600 border-amber-800';
+    roleIcon = '🛡️';
+  }
+
+  const firstName = user.name.split(' ')[0];
+
+  return L.divIcon({
+    className: 'custom-teammate-gps-marker',
+    html: `
+      <div class="flex flex-col items-center cursor-pointer transition-transform hover:scale-110">
+        <div class="px-2 py-0.5 rounded-full text-[10px] font-black text-white ${badgeColor} shadow-lg border border-white/80 whitespace-nowrap flex items-center gap-1">
+          <span>${roleIcon}</span>
+          <span>${firstName}</span>
+        </div>
+        <div class="w-3 h-3 rounded-full ${badgeColor} border-2 border-white -mt-0.5 shadow-md"></div>
+      </div>
+    `,
+    iconSize: [80, 36],
+    iconAnchor: [40, 32],
+    popupAnchor: [0, -32]
+  });
+}
+
+function BrigadeMapController({ targetCenter }: { targetCenter: [number, number] | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (targetCenter) {
+      map.flyTo(targetCenter, 18, { duration: 1.2 });
+    }
+  }, [targetCenter, map]);
+  return null;
+}
+
 function MapClickHandler({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) {
   useMapEvents({
     click(e) {
@@ -104,6 +165,7 @@ function MapClickHandler({ onMapClick }: { onMapClick: (lat: number, lng: number
 
 export const BrigadePage: React.FC = () => {
   const { user, can } = useAuth();
+  const { myLocation, activeUsers, gpsError, requestGpsPermission } = useUserTracking();
 
   // Active Tab
   const [activeTab, setActiveTab] = useState<'mapa' | 'extintores' | 'brigadistas' | 'pontos_encontro'>('mapa');
@@ -122,6 +184,7 @@ export const BrigadePage: React.FC = () => {
   const [mapLayerFilter, setMapLayerFilter] = useState<'all' | 'extinguishers' | 'points' | 'members'>('all');
   const [selectedMapItem, setSelectedMapItem] = useState<{ type: 'extinguisher' | 'point' | 'member'; data: any } | null>(null);
   const [quickAddCoords, setQuickAddCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [mapFlyTo, setMapFlyTo] = useState<[number, number] | null>(null);
 
   // Extinguishers Filter & Modal
   const [extSearch, setExtSearch] = useState('');
@@ -696,11 +759,37 @@ export const BrigadePage: React.FC = () => {
                   >
                     🧑‍🚒 Brigadistas ({members.filter(m => m.lat && m.lng).length})
                   </button>
+                  <button
+                    onClick={() => setMapLayerFilter(mapLayerFilter === 'members' ? 'all' : 'members')}
+                    className="px-2.5 py-1 text-[11px] font-black rounded-lg transition-all bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5"
+                  >
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span>{activeUsers.length} Online</span>
+                  </button>
                 </div>
               </div>
 
-              {/* Right: Map Style Switcher (Satellite vs Streets) */}
+              {/* Right: Map Style Switcher & Center GPS */}
               <div className="flex items-center gap-2 pointer-events-auto">
+                <button
+                  onClick={() => {
+                    if (myLocation) {
+                      setMapFlyTo([myLocation.lat, myLocation.lng]);
+                    } else {
+                      requestGpsPermission();
+                    }
+                  }}
+                  className={`px-2.5 py-1 text-[11px] font-bold rounded-xl shadow-lg border flex items-center gap-1.5 transition-all ${
+                    myLocation
+                      ? 'bg-blue-600 text-white border-blue-400'
+                      : 'bg-slate-950/85 text-amber-400 border-slate-700 hover:text-white'
+                  }`}
+                  title={myLocation ? 'Centralizar no Meu GPS' : 'Ligar GPS'}
+                >
+                  <Navigation className={`w-3.5 h-3.5 ${myLocation ? 'animate-pulse' : ''}`} />
+                  <span>{myLocation ? 'Meu GPS' : 'Ligar GPS'}</span>
+                </button>
+
                 <div className="bg-slate-950/85 backdrop-blur-md p-1 rounded-xl border border-slate-700/80 flex items-center shadow-lg">
                   <button
                     onClick={() => setMapMode('satellite')}
@@ -750,6 +839,9 @@ export const BrigadePage: React.FC = () => {
                   />
                 )}
 
+                {/* Map Pan/Zoom Controller */}
+                <BrigadeMapController targetCenter={mapFlyTo} />
+
                 {/* Map Click Listener */}
                 <MapClickHandler
                   onMapClick={(lat, lng) => {
@@ -797,6 +889,68 @@ export const BrigadePage: React.FC = () => {
                         }}
                       />
                     ))}
+
+                {/* CURRENT USER GPS MARKER (VOCÊ) */}
+                {myLocation && (
+                  <>
+                    <Circle
+                      center={[myLocation.lat, myLocation.lng]}
+                      radius={Math.max(10, myLocation.accuracy || 15)}
+                      pathOptions={{
+                        color: '#2563eb',
+                        fillColor: '#3b82f6',
+                        fillOpacity: 0.15,
+                        weight: 1.5
+                      }}
+                    />
+                    <Marker position={[myLocation.lat, myLocation.lng]} icon={currentUserGpsIcon}>
+                      <Popup maxWidth={260}>
+                        <div className="p-1 text-center">
+                          <div className="inline-block px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-100 text-blue-900 mb-1">
+                            Sua Posição (Você)
+                          </div>
+                          <h4 className="font-bold text-sm text-slate-900">GPS Ativo</h4>
+                          <p className="text-[11px] text-slate-500 mt-0.5">
+                            Precisão: ~{myLocation.accuracy || 10} metros
+                          </p>
+                        </div>
+                      </Popup>
+                    </Marker>
+                  </>
+                )}
+
+                {/* ACTIVE LOGGED-IN TEAMMATES */}
+                {activeUsers
+                  .filter(u => !u.isCurrentUser)
+                  .map(tm => (
+                    <Marker
+                      key={`gps-user-${tm.userId}`}
+                      position={[tm.lat, tm.lng]}
+                      icon={createTeammateGpsIcon(tm)}
+                    >
+                      <Popup maxWidth={260}>
+                        <div className="p-1">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span className={`w-2 h-2 rounded-full ${tm.roleType === 'brigadista' ? 'bg-red-500' : 'bg-amber-500'}`}></span>
+                            <span className="text-[10px] font-black uppercase text-slate-500">
+                              {tm.roleType === 'brigadista' ? 'Brigadista em Campo' : tm.roleType === 'sst' ? 'Equipe SST' : 'Executante'}
+                            </span>
+                          </div>
+                          <h4 className="font-black text-sm text-slate-900">{tm.name}</h4>
+                          <p className="text-xs text-slate-600 font-medium">{tm.roleName}</p>
+                          {tm.phone && (
+                            <a
+                              href={`tel:${tm.phone}`}
+                              className="mt-2 flex items-center justify-center gap-1 text-emerald-700 font-bold bg-emerald-50 px-2 py-1 rounded-lg hover:bg-emerald-100 text-xs"
+                            >
+                              <Phone className="w-3.5 h-3.5" />
+                              Ligar para {tm.name.split(' ')[0]}
+                            </a>
+                          )}
+                        </div>
+                      </Popup>
+                    </Marker>
+                  ))}
               </MapContainer>
             </div>
           </div>

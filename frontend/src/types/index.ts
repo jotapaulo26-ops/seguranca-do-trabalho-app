@@ -350,3 +350,31 @@ export interface BrigadeStats {
     lastDate?: string;
   };
 }
+
+export interface ActiveUserLocation {
+  userId: string;
+  name: string;
+  roleName: string;
+  roleType: 'brigadista' | 'sst' | 'executante' | 'admin';
+  phone?: string;
+  department?: string;
+  lat: number;
+  lng: number;
+  accuracy?: number;
+  heading?: number;
+  speed?: number;
+  lastSeenAt: string;
+  lastSeenTimestamp: number;
+  deviceId?: string;
+  isCurrentUser?: boolean;
+}
+
+export interface NearbyRiskAlert {
+  id: string;
+  name: string;
+  risk_type: string;
+  distance: number;
+  isInsideZone: boolean;
+  required_epis: string[];
+}
+

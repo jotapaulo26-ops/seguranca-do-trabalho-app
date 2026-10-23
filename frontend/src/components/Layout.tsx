@@ -21,6 +21,7 @@ import {
   QrCode
 } from 'lucide-react';
 import { QRScannerModal } from './QRScannerModal';
+import { GeofenceAlertBanner } from './GeofenceAlertBanner';
 
 export const Layout: React.FC = () => {
   const { user, logout, can } = useAuth();
@@ -362,6 +363,9 @@ export const Layout: React.FC = () => {
 
       {/* Integrated Camera QR Scanner Modal */}
       <QRScannerModal isOpen={scannerOpen} onClose={() => setScannerOpen(false)} />
+
+      {/* Geofencing Proximity Alert Banner */}
+      <GeofenceAlertBanner />
     </div>
   );
 };
