@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useConnectivity } from '../context/ConnectivityContext';
 import { api } from '../services/api';
 import { getDeviceId } from '../services/deviceId';
 import {
@@ -18,13 +19,19 @@ import {
   Smartphone,
   PlusCircle,
   Flame,
-  QrCode
+  QrCode,
+  Wifi,
+  WifiOff,
+  RefreshCw,
+  Download,
+  CheckCircle2
 } from 'lucide-react';
 import { QRScannerModal } from './QRScannerModal';
 import { GeofenceAlertBanner } from './GeofenceAlertBanner';
 
 export const Layout: React.FC = () => {
   const { user, logout, can } = useAuth();
+  const { isOnline, pendingCount, isSyncing, syncNow, canInstall, isInstalled, triggerInstall, lastSyncTime } = useConnectivity();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -140,6 +147,67 @@ export const Layout: React.FC = () => {
           </button>
         </div>
 
+        {/* PWA Install Button */}
+        {canInstall && (
+          <div className="px-3 mb-2">
+            <button
+              onClick={triggerInstall}
+              className="w-full py-2.5 px-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all active:scale-95"
+            >
+              <Download className="w-4 h-4 text-emerald-200" />
+              <span>Instalar Aplicativo (PWA)</span>
+            </button>
+          </div>
+        )}
+
+        {/* Offline & Connectivity Status Box */}
+        <div className="px-3 py-2.5 mx-3 mb-2 bg-slate-800/90 rounded-xl border border-slate-700/80">
+          <div className="flex items-center justify-between mb-1.5">
+            <div className="flex items-center gap-1.5">
+              {isOnline ? (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-[11px] font-bold text-emerald-400">Online</span>
+                </>
+              ) : (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                  <span className="text-[11px] font-bold text-amber-400">Modo Offline</span>
+                </>
+              )}
+            </div>
+            <button
+              onClick={() => syncNow()}
+              disabled={isSyncing || !isOnline}
+              title="Sincronizar fila de alterações"
+              className="p-1 text-slate-400 hover:text-amber-400 disabled:opacity-40 disabled:hover:text-slate-400 transition-colors"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-amber-400' : ''}`} />
+            </button>
+          </div>
+
+          {pendingCount > 0 ? (
+            <div className="text-[10px] text-amber-300 font-medium bg-amber-500/10 border border-amber-500/20 rounded px-2 py-1 mb-1">
+              {pendingCount} item(ns) pendente(s) de envio
+            </div>
+          ) : (
+            <div className="text-[10px] text-slate-400">
+              {lastSyncTime ? `Sincronizado às ${lastSyncTime}` : 'Dados 100% atualizados'}
+            </div>
+          )}
+
+          {isOnline && pendingCount > 0 && (
+            <button
+              onClick={() => syncNow()}
+              disabled={isSyncing}
+              className="w-full mt-1.5 py-1 text-[10px] font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 rounded transition-colors flex items-center justify-center gap-1"
+            >
+              <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
+              {isSyncing ? 'Sincronizando...' : 'Enviar Agora'}
+            </button>
+          )}
+        </div>
+
         {/* Device Tracker Box in Desktop Sidebar */}
         <div className="px-4 py-3 mx-3 mb-3 bg-slate-800/80 rounded-xl border border-slate-700/60">
           <div className="flex items-center gap-2 text-slate-400 text-[11px] mb-1">
@@ -189,6 +257,37 @@ export const Layout: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Mobile Connectivity Pill */}
+          <button
+            onClick={() => isOnline && pendingCount > 0 && syncNow()}
+            className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 border transition-all ${
+              isOnline
+                ? pendingCount > 0
+                  ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
+                  : 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
+                : 'bg-rose-500/20 border-rose-500/50 text-rose-300'
+            }`}
+          >
+            {isOnline ? (
+              pendingCount > 0 ? (
+                <>
+                  <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
+                  <span>{pendingCount} pend.</span>
+                </>
+              ) : (
+                <>
+                  <Wifi className="w-3 h-3 text-emerald-400" />
+                  <span>Online</span>
+                </>
+              )
+            ) : (
+              <>
+                <WifiOff className="w-3 h-3 text-rose-400" />
+                <span>Offline{pendingCount > 0 ? ` (${pendingCount})` : ''}</span>
+              </>
+            )}
+          </button>
+
           <button
             onClick={() => setScannerOpen(true)}
             title="Escanear QR Code de Campo"
@@ -257,8 +356,56 @@ export const Layout: React.FC = () => {
               </div>
             </div>
 
-            <div className="pt-4 border-t border-slate-800">
-              <div className="text-xs text-slate-400 mb-2 truncate">
+            <div className="pt-4 border-t border-slate-800 space-y-3">
+              {canInstall && (
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    triggerInstall();
+                  }}
+                  className="w-full py-2.5 px-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-md active:scale-95"
+                >
+                  <Download className="w-4 h-4 text-emerald-200" />
+                  <span>Instalar Aplicativo no Celular</span>
+                </button>
+              )}
+
+              {/* Mobile Connectivity Card */}
+              <div className="p-2.5 bg-slate-800/80 rounded-xl border border-slate-700/60 text-xs">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-1.5">
+                    {isOnline ? (
+                      <>
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="font-bold text-emerald-400">Online</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="w-2 h-2 rounded-full bg-amber-500" />
+                        <span className="font-bold text-amber-400">Modo Offline</span>
+                      </>
+                    )}
+                  </div>
+                  {isOnline && pendingCount > 0 && (
+                    <button
+                      onClick={() => syncNow()}
+                      disabled={isSyncing}
+                      className="text-[10px] font-bold text-amber-400 underline"
+                    >
+                      {isSyncing ? 'Enviando...' : 'Sincronizar'}
+                    </button>
+                  )}
+                </div>
+                <div className="text-[10px] text-slate-400">
+                  {pendingCount > 0
+                    ? `${pendingCount} alteração(ões) pendente(s)`
+                    : lastSyncTime
+                    ? `Sincronizado às ${lastSyncTime}`
+                    : '100% Sincronizado'}
+                </div>
+              </div>
+
+              <div className="text-xs text-slate-400 truncate">
                 Dispositivo: <span className="font-mono text-amber-300">{deviceId}</span>
               </div>
               <button
@@ -279,6 +426,38 @@ export const Layout: React.FC = () => {
 
       {/* MAIN CONTENT WRAPPER */}
       <main className="flex-1 flex flex-col min-w-0 overflow-y-auto relative z-0">
+        {/* Offline Operation Notification Banner */}
+        {!isOnline && (
+          <div className="bg-amber-500/10 border-b border-amber-500/30 px-4 py-2.5 text-xs text-amber-900 bg-amber-50 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <WifiOff className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>
+                <strong>Modo Offline Ativo:</strong> Você está sem sinal de internet. Novas APRs, assinaturas e inspeções serão salvas no aparelho e sincronizadas automaticamente ao reconectar.
+                {pendingCount > 0 && ` (${pendingCount} pendência(s) na fila)`}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Automatic Sync in Progress Banner */}
+        {isOnline && pendingCount > 0 && (
+          <div className="bg-blue-50 border-b border-blue-200 px-4 py-2.5 text-xs text-blue-900 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <RefreshCw className={`w-4 h-4 text-blue-600 shrink-0 ${isSyncing ? 'animate-spin' : ''}`} />
+              <span>
+                Conexão restabelecida! Sincronizando {pendingCount} alteração(ões) pendente(s) com a base central...
+              </span>
+            </div>
+            <button
+              onClick={() => syncNow()}
+              disabled={isSyncing}
+              className="text-xs font-bold text-blue-700 hover:text-blue-900 underline shrink-0 ml-2"
+            >
+              {isSyncing ? 'Enviando...' : 'Sincronizar Agora'}
+            </button>
+          </div>
+        )}
+
         {/* Critical Alerts Banner (Top of page) */}
         {alertSummary.totalExpired > 0 && (
           <div className="bg-red-50 border-b border-red-200 px-4 py-2.5 flex items-center justify-between text-xs text-red-800">

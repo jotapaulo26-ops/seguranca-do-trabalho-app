@@ -334,12 +334,17 @@ documentRoutes.post('/apr', authenticateToken, requirePermission('documents', 'c
     return res.status(400).json({ error: 'Tipo da APR, título e dados da análise são obrigatórios.' });
   }
 
+  if (req.body.id) {
+    const existing = db.documents.findById(req.body.id);
+    if (existing) return res.status(200).json(existing);
+  }
+
   const code = getNextDocumentCode('APR');
   const clientIp = req.headers['x-forwarded-for'] as string || req.socket.remoteAddress || '127.0.0.1';
   const effectiveDeviceId = deviceId || (req.headers['x-device-id'] as string) || 'NAV-' + Math.random().toString(36).substring(2, 10).toUpperCase();
 
   const newDoc: DocumentRecord = {
-    id: 'doc_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+    id: req.body.id || ('doc_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6)),
     code,
     type: aprType,
     title: title.trim(),
@@ -402,6 +407,11 @@ documentRoutes.post('/pt', authenticateToken, requirePermission('documents', 'cr
     return res.status(400).json({ error: 'Título da PT e tipos de trabalho autorizados são obrigatórios.' });
   }
 
+  if (req.body.id) {
+    const existing = db.documents.findById(req.body.id);
+    if (existing) return res.status(200).json(existing);
+  }
+
   // TRAVA DE SEGURANÇA OPERACIONAL SST:
   // Se a PT for vinculada a uma APR, a APR DEVE estar 100% homologada com todas as assinaturas!
   if (aprId) {
@@ -450,7 +460,7 @@ documentRoutes.post('/pt', authenticateToken, requirePermission('documents', 'cr
   });
 
   const newDoc: DocumentRecord = {
-    id: 'doc_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+    id: req.body.id || ('doc_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6)),
     code,
     type: isPet ? 'PET' : 'PT',
     title: title.trim(),
@@ -512,6 +522,11 @@ documentRoutes.post('/os', authenticateToken, requirePermission('documents', 'cr
     return res.status(400).json({ error: 'Selecione o colaborador para emissão da Ordem de Serviço (NR-01).' });
   }
 
+  if (req.body.id) {
+    const existing = db.documents.findById(req.body.id);
+    if (existing) return res.status(200).json(existing);
+  }
+
   const emp = db.employees.findById(employeeId);
   if (!emp) {
     return res.status(404).json({ error: 'Colaborador não encontrado.' });
@@ -536,7 +551,7 @@ documentRoutes.post('/os', authenticateToken, requirePermission('documents', 'cr
   ];
 
   const newDoc: DocumentRecord = {
-    id: 'doc_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+    id: req.body.id || ('doc_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6)),
     code,
     type: 'OS',
     title: title ? title.trim() : `Ordem de Serviço NR-01 — ${emp.name} (${emp.role})`,
@@ -605,6 +620,11 @@ documentRoutes.post('/epi-receipt', authenticateToken, requirePermission('docume
     return res.status(400).json({ error: 'Selecione o colaborador para emissão da Ficha de EPI.' });
   }
 
+  if (req.body.id) {
+    const existing = db.documents.findById(req.body.id);
+    if (existing) return res.status(200).json(existing);
+  }
+
   const emp = db.employees.findById(employeeId);
   if (!emp) {
     return res.status(404).json({ error: 'Colaborador não encontrado.' });
@@ -631,7 +651,7 @@ documentRoutes.post('/epi-receipt', authenticateToken, requirePermission('docume
     'Recebi da empresa os Equipamentos de Proteção Individual (EPI) constantes nesta ficha, em perfeitas condições de uso e funcionamento, com os respectivos Certificados de Aprovação (CA) válidos. Comprometo-me a usá-los exclusivamente em serviço, zelar por sua guarda e conservação e comunicar imediatamente ao setor de SST qualquer dano ou extravio, nos termos da NR-06 da Portaria 3.214/78 do MTE.';
 
   const newDoc: DocumentRecord = {
-    id: 'doc_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+    id: req.body.id || ('doc_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6)),
     code,
     type: 'EPI_FICHA',
     title: title ? title.trim() : `Ficha de Entrega de EPI (NR-06) — ${emp.name}`,
@@ -691,12 +711,17 @@ documentRoutes.post('/checklist', authenticateToken, requirePermission('document
     return res.status(400).json({ error: 'Título do checklist e lista de itens inspecionados são obrigatórios.' });
   }
 
+  if (req.body.id) {
+    const existing = db.documents.findById(req.body.id);
+    if (existing) return res.status(200).json(existing);
+  }
+
   const code = getNextDocumentCode('CHK');
   const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '127.0.0.1';
   const effectiveDeviceId = deviceId || (req.headers['x-device-id'] as string) || 'NAV-WEB';
 
   const newDoc: DocumentRecord = {
-    id: 'doc_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+    id: req.body.id || ('doc_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6)),
     code,
     type: 'CHECKLIST',
     title: title.trim(),
@@ -742,6 +767,11 @@ documentRoutes.post('/', authenticateToken, requirePermission('documents', 'crea
     return res.status(400).json({ error: 'Tipo e título são obrigatórios.' });
   }
 
+  if (req.body.id) {
+    const existing = db.documents.findById(req.body.id);
+    if (existing) return res.status(200).json(existing);
+  }
+
   const prefixMap: Record<string, string> = {
     'PT': 'PT',
     'PET': 'PET',
@@ -760,7 +790,7 @@ documentRoutes.post('/', authenticateToken, requirePermission('documents', 'crea
   const effectiveDeviceId = deviceId || (req.headers['x-device-id'] as string) || 'NAV-WEB';
 
   const newDoc: DocumentRecord = {
-    id: 'doc_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+    id: req.body.id || ('doc_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6)),
     code,
     type,
     title: title.trim(),

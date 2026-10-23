@@ -1,16 +1,25 @@
 {
   "short_name": "SegTrabalho",
-  "name": "Sistema de Segurança do Trabalho",
+  "name": "Sistema de Segurança do Trabalho - SegTrabalho",
+  "description": "Sistema Integrado de Gestão SST, APRs, PTs, Mapas e Brigada de Emergência com suporte Offline",
   "icons": [
     {
-      "src": "/vite.svg",
+      "src": "/icon-192.svg",
       "type": "image/svg+xml",
-      "sizes": "192x192 512x512"
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512",
+      "purpose": "any maskable"
     }
   ],
   "start_url": "/",
   "background_color": "#0f172a",
   "theme_color": "#f59e0b",
   "display": "standalone",
-  "orientation": "portrait"
+  "orientation": "portrait",
+  "scope": "/"
 }
