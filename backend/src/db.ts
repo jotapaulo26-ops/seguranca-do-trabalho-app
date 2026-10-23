@@ -36,6 +36,10 @@ export interface User {
   role_id: string;
   device_id?: string;
   active: number;
+  approval_status?: 'aprovado' | 'pendente' | 'rejeitado';
+  photo_url?: string;
+  department?: string;
+  phone?: string;
   created_at: string;
 }
 
@@ -1125,6 +1129,12 @@ export function initDatabase(): void {
     }
   };
 
+  (memoryDb.users || []).forEach(u => {
+    if (!u.approval_status) {
+      u.approval_status = 'aprovado';
+    }
+  });
+
   (memoryDb.risk_locations || []).forEach(r => {
     if (!r.geofence_radius) {
       r.geofence_radius = 25;
@@ -1226,6 +1236,7 @@ export const db = {
 
   users: {
     find: () => memoryDb.users.map(({ password_hash, ...u }) => u),
+    findPending: () => memoryDb.users.filter(u => u.approval_status === 'pendente').map(({ password_hash, ...u }) => u),
     findById: (id: string) => memoryDb.users.find(u => u.id === id),
     findByEmail: (email: string) => memoryDb.users.find(u => u.email.toLowerCase() === email.toLowerCase()),
     create: (user: User) => {

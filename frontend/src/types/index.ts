@@ -15,6 +15,10 @@ export interface User {
   role_name?: string;
   device_id?: string;
   active: number;
+  approval_status?: 'aprovado' | 'pendente' | 'rejeitado';
+  photo_url?: string;
+  department?: string;
+  phone?: string;
   created_at: string;
 }
 

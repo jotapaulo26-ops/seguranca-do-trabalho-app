@@ -16,6 +16,7 @@ interface AuthContextType {
   token: string | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  setAuthSession: (token: string, user: AuthUser) => void;
   logout: () => void;
   can: (module: string, action: string) => boolean;
 }
@@ -66,6 +67,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('SEGTRABALHO_USER', JSON.stringify(res.user));
   };
 
+  const setAuthSession = (newToken: string, newUser: AuthUser) => {
+    setToken(newToken);
+    setUser(newUser);
+    localStorage.setItem('SEGTRABALHO_AUTH_TOKEN', newToken);
+    localStorage.setItem('SEGTRABALHO_USER', JSON.stringify(newUser));
+  };
+
   const logout = () => {
     setToken(null);
     setUser(null);
@@ -83,7 +91,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, logout, can }}>
+    <AuthContext.Provider value={{ user, token, isLoading, login, setAuthSession, logout, can }}>
       {children}
     </AuthContext.Provider>
   );

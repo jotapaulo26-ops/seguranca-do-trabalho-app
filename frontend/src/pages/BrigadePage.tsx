@@ -186,6 +186,21 @@ export const BrigadePage: React.FC = () => {
   const [quickAddCoords, setQuickAddCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [mapFlyTo, setMapFlyTo] = useState<[number, number] | null>(null);
 
+  // Auto-center Brigade map on User GPS as soon as location is acquired
+  const hasAutoCenteredBrigadeRef = useRef(false);
+  useEffect(() => {
+    if (myLocation && !hasAutoCenteredBrigadeRef.current) {
+      hasAutoCenteredBrigadeRef.current = true;
+      setMapFlyTo([myLocation.lat, myLocation.lng]);
+    }
+  }, [myLocation]);
+
+  useEffect(() => {
+    if (activeTab === 'mapa' && myLocation) {
+      setMapFlyTo([myLocation.lat, myLocation.lng]);
+    }
+  }, [activeTab]);
+
   // Extinguishers Filter & Modal
   const [extSearch, setExtSearch] = useState('');
   const [extTypeFilter, setExtTypeFilter] = useState<string>('all');

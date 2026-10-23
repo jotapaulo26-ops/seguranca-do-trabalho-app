@@ -19,6 +19,75 @@ userRoutes.get('/', authenticateToken, requirePermission('users', 'view'), (req:
   return res.json(usersWithRole);
 });
 
+// List pending registration requests
+userRoutes.get('/pending', authenticateToken, requirePermission('users', 'manage'), (req: Request, res: Response) => {
+  const pending = db.users.findPending();
+  return res.json(pending);
+});
+
+// Approve user registration and assign role
+userRoutes.put('/:id/approve', authenticateToken, requirePermission('users', 'manage'), (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { role_id } = req.body;
+
+  if (!role_id) {
+    return res.status(400).json({ error: 'Selecione um Perfil de Acesso para o usuário.' });
+  }
+
+  const user = db.users.findById(id);
+  if (!user) {
+    return res.status(404).json({ error: 'Usuário não encontrado.' });
+  }
+
+  const role = db.roles.findById(role_id);
+  if (!role) {
+    return res.status(400).json({ error: 'Perfil de Acesso inválido ou inexistente.' });
+  }
+
+  const updated = db.users.update(id, {
+    approval_status: 'aprovado',
+    active: 1,
+    role_id: role.id
+  });
+
+  logAudit(
+    req,
+    'APROVAR_CADASTRO',
+    'USUARIOS',
+    `Cadastro aprovado: ${user.name} (${user.email}) com perfil atribuído: ${role.name}`
+  );
+
+  return res.json({
+    message: `Cadastro de ${user.name} aprovado com sucesso!`,
+    user: updated
+  });
+});
+
+// Reject user registration
+userRoutes.put('/:id/reject', authenticateToken, requirePermission('users', 'manage'), (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { reason } = req.body;
+
+  const user = db.users.findById(id);
+  if (!user) {
+    return res.status(404).json({ error: 'Usuário não encontrado.' });
+  }
+
+  db.users.update(id, {
+    approval_status: 'rejeitado',
+    active: 0
+  });
+
+  logAudit(
+    req,
+    'REJEITAR_CADASTRO',
+    'USUARIOS',
+    `Cadastro de ${user.name} (${user.email}) foi rejeitado pelo administrador. Motivo: ${reason || 'Não especificado'}`
+  );
+
+  return res.json({ message: `Cadastro de ${user.name} foi recusado.` });
+});
+
 // Create user
 userRoutes.post('/', authenticateToken, requirePermission('users', 'manage'), (req: Request, res: Response) => {
   const { name, email, password, role_id } = req.body;

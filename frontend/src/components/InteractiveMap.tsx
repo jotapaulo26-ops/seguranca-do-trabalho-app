@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { RiskLocation, ActiveUserLocation } from '../types';
@@ -145,6 +145,15 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   const [mapMode, setMapMode] = useState<'satellite' | 'streets'>('satellite');
   const [flyToCoords, setFlyToCoords] = useState<[number, number] | null>(null);
   const [showTeamLayer, setShowTeamLayer] = useState(true);
+
+  // Auto-center smoothly on user GPS location as soon as it is acquired
+  const hasAutoCenteredRef = useRef(false);
+  useEffect(() => {
+    if (myLocation && !hasAutoCenteredRef.current) {
+      hasAutoCenteredRef.current = true;
+      setFlyToCoords([myLocation.lat, myLocation.lng]);
+    }
+  }, [myLocation]);
 
   const filteredLocations = locations.filter(loc => {
     if (filterType === 'all') return true;

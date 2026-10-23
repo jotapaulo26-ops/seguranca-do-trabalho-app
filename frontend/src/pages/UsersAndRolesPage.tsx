@@ -14,7 +14,9 @@ import {
   KeyRound,
   Smartphone,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  Camera,
+  UserCheck
 } from 'lucide-react';
 
 const MODULES_LIST = [
@@ -40,10 +42,14 @@ const ACTION_LABELS: Record<string, string> = {
 
 export const UsersAndRolesPage: React.FC = () => {
   const { can } = useAuth();
-  const [activeTab, setActiveTab] = useState<'roles' | 'users'>('roles');
+  const [activeTab, setActiveTab] = useState<'roles' | 'users' | 'pending'>('roles');
 
   const [roles, setRoles] = useState<Role[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [pendingUsers, setPendingUsers] = useState<User[]>([]);
+  const [selectedRolesForPending, setSelectedRolesForPending] = useState<Record<string, string>>({});
+  const [approvingUserId, setApprovingUserId] = useState<string | null>(null);
+  const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Modal states for Role
@@ -62,12 +68,22 @@ export const UsersAndRolesPage: React.FC = () => {
 
   const loadData = async () => {
     try {
-      const [rolesData, usersData] = await Promise.all([
+      const [rolesData, usersData, pendingData] = await Promise.all([
         api.get<Role[]>('/roles'),
-        api.get<User[]>('/users')
+        api.get<User[]>('/users'),
+        api.get<User[]>('/users/pending').catch(() => [] as User[])
       ]);
       setRoles(rolesData);
       setUsers(usersData);
+      setPendingUsers(pendingData || []);
+
+      // Default selected role for each pending user
+      const defaultRole = rolesData.find(r => r.id === 'role_tec_seg') || rolesData[0];
+      const initialMap: Record<string, string> = {};
+      (pendingData || []).forEach(u => {
+        initialMap[u.id] = defaultRole?.id || '';
+      });
+      setSelectedRolesForPending(initialMap);
     } catch (err) {
       console.error('Erro ao carregar perfis e usuários:', err);
     } finally {
@@ -202,6 +218,35 @@ export const UsersAndRolesPage: React.FC = () => {
     }
   };
 
+  const handleApproveUser = async (user: User) => {
+    const roleId = selectedRolesForPending[user.id] || roles[0]?.id;
+    if (!roleId) {
+      alert('Selecione um Perfil de Acesso para o usuário.');
+      return;
+    }
+    setApprovingUserId(user.id);
+    try {
+      await api.put(`/users/${user.id}/approve`, { role_id: roleId });
+      loadData();
+    } catch (err: any) {
+      alert(err.message || 'Erro ao aprovar usuário.');
+    } finally {
+      setApprovingUserId(null);
+    }
+  };
+
+  const handleRejectUser = async (user: User) => {
+    const reason = prompt(`Deseja realmente recusar o cadastro de ${user.name}? Informe o motivo (opcional):`);
+    if (reason !== null) {
+      try {
+        await api.put(`/users/${user.id}/reject`, { reason });
+        loadData();
+      } catch (err: any) {
+        alert(err.message || 'Erro ao recusar usuário.');
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -266,6 +311,22 @@ export const UsersAndRolesPage: React.FC = () => {
         >
           <Users className="w-4 h-4" />
           Usuários do Sistema ({users.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('pending')}
+          className={`py-2 px-4 text-xs font-bold border-b-2 flex items-center gap-2 ${
+            activeTab === 'pending'
+              ? 'border-amber-500 text-slate-900'
+              : 'border-transparent text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          <UserCheck className="w-4 h-4" />
+          <span>Cadastros Pendentes</span>
+          {pendingUsers.length > 0 && (
+            <span className="text-[10px] bg-red-600 text-white font-black px-2 py-0.5 rounded-full animate-pulse shadow-sm">
+              {pendingUsers.length}
+            </span>
+          )}
         </button>
       </div>
 
@@ -383,6 +444,146 @@ export const UsersAndRolesPage: React.FC = () => {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: PENDING REGISTRATIONS */}
+      {activeTab === 'pending' && (
+        <div className="space-y-4">
+          {pendingUsers.length === 0 ? (
+            <div className="bg-white rounded-3xl p-12 text-center border border-slate-200">
+              <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center mb-3">
+                <Check className="w-8 h-8" />
+              </div>
+              <h3 className="font-extrabold text-base text-slate-900 mb-1">
+                Nenhum cadastro pendente
+              </h3>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                Todos os colaboradores que solicitaram acesso já foram avaliados e configurados com seus devidos perfis de segurança.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {pendingUsers.map(user => (
+                <div
+                  key={user.id}
+                  className="bg-white rounded-3xl p-5 border-2 border-amber-300 shadow-md hover:shadow-lg transition-all flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-start gap-4 mb-4">
+                      {/* Facial Photo Thumbnail with Zoom preview */}
+                      <div className="relative group shrink-0">
+                        {user.photo_url ? (
+                          <img
+                            src={user.photo_url}
+                            alt={user.name}
+                            onClick={() => setPreviewPhotoUrl(user.photo_url || null)}
+                            className="w-16 h-16 rounded-2xl object-cover border-2 border-amber-400 shadow cursor-pointer hover:scale-105 transition-transform"
+                            title="Clique para ampliar"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center font-bold text-xs">
+                            Sem Foto
+                          </div>
+                        )}
+                        <span className="absolute -bottom-1 -right-1 bg-amber-500 text-slate-950 p-1 rounded-full text-[10px] shadow">
+                          <Camera className="w-3 h-3" />
+                        </span>
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <h4 className="font-extrabold text-sm text-slate-900 truncate">{user.name}</h4>
+                          <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-full shrink-0">
+                            Aguardando
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 truncate mb-1">{user.email}</p>
+                        <div className="flex flex-wrap gap-1.5 text-[11px] text-slate-600">
+                          {user.department && (
+                            <span className="bg-slate-100 px-2 py-0.5 rounded-md font-medium">
+                              Setor: {user.department}
+                            </span>
+                          )}
+                          {user.phone && (
+                            <span className="bg-slate-100 px-2 py-0.5 rounded-md font-medium">
+                              Tel: {user.phone}
+                            </span>
+                          )}
+                          <span className="text-slate-400 text-[10px] self-center">
+                            Solicitado em {new Date(user.created_at).toLocaleDateString('pt-BR')}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Role Selection */}
+                    <div className="bg-amber-50/60 p-3 rounded-2xl border border-amber-200/80 mb-4">
+                      <label className="block text-[11px] font-bold text-slate-800 mb-1">
+                        Atribuir Perfil de Acesso & Permissões:
+                      </label>
+                      <select
+                        value={selectedRolesForPending[user.id] || ''}
+                        onChange={(e) =>
+                          setSelectedRolesForPending({
+                            ...selectedRolesForPending,
+                            [user.id]: e.target.value
+                          })
+                        }
+                        className="w-full px-3 py-2 text-xs font-semibold bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500"
+                      >
+                        {roles.map(r => (
+                          <option key={r.id} value={r.id}>
+                            {r.name} {r.is_system ? '(Nativo)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-2 pt-3 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => handleApproveUser(user)}
+                      disabled={approvingUserId === user.id}
+                      className="flex-1 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
+                    >
+                      <Check className="w-4 h-4" />
+                      {approvingUserId === user.id ? 'Aprovando...' : 'Aprovar e Liberar Acesso'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRejectUser(user)}
+                      className="py-2.5 px-3 border border-slate-200 text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-xl text-xs font-semibold flex items-center gap-1 transition-all"
+                    >
+                      <X className="w-4 h-4" />
+                      Recusar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* MODAL: PHOTO PREVIEW */}
+      {previewPhotoUrl && (
+        <div
+          onClick={() => setPreviewPhotoUrl(null)}
+          className="fixed inset-0 z-[10000] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
+        >
+          <div className="bg-white p-3 rounded-3xl max-w-sm w-full shadow-2xl border border-slate-200 text-center">
+            <h4 className="font-bold text-slate-900 text-xs mb-2">Foto Facial de Referência</h4>
+            <img src={previewPhotoUrl} alt="Foto Ampliada" className="w-full h-72 object-cover rounded-2xl mb-3" />
+            <button
+              onClick={() => setPreviewPhotoUrl(null)}
+              className="w-full py-2 bg-slate-900 text-white rounded-xl text-xs font-bold"
+            >
+              Fechar Visualização
+            </button>
           </div>
         </div>
       )}
