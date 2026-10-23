@@ -95,7 +95,47 @@ authRoutes.post('/pre-login', (req: Request, res: Response) => {
     return res.status(401).json({ error: 'Credenciais inválidas. Verifique seu e-mail e senha.' });
   }
 
-  // Se o usuário (como o Admin inicial) ainda não tem foto biométrica cadastrada
+  // ACESSO DIRETO PARA O ADMINISTRADOR (Sem exigência de biometria facial)
+  const isAdmin = user.role_id === 'role_admin' || user.email === 'admin@segtrabalho.com.br';
+  if (isAdmin) {
+    const role = db.roles.findById(user.role_id);
+    const permissions = role ? role.permissions : {};
+
+    const tokenPayload = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      roleId: user.role_id,
+      roleName: role ? role.name : 'Administrador',
+      permissions,
+      deviceId: req.body.deviceId || 'Desconhecido'
+    };
+
+    const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '7d' });
+    req.user = tokenPayload;
+    logAudit(
+      req,
+      'LOGIN_ADMIN_DIRETO',
+      'AUTENTICACAO',
+      `Login de Administrador autorizado diretamente sem biometria facial para gestão e aprovação de usuários.`
+    );
+
+    return res.json({
+      success: true,
+      directLogin: true,
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        roleId: user.role_id,
+        roleName: role ? role.name : 'Administrador',
+        permissions
+      }
+    });
+  }
+
+  // Se o usuário ainda não tem foto biométrica cadastrada
   if (!user.photo_url) {
     const preToken = jwt.sign(
       { id: user.id, email: user.email, purpose: 'facial-enrollment' },

@@ -73,22 +73,34 @@ export const Login: React.FC = () => {
     try {
       const res = await api.post<{
         success: boolean;
+        directLogin?: boolean;
+        token?: string;
+        user?: any;
         requireFacialEnrollment?: boolean;
         requireFacialValidation?: boolean;
-        preToken: string;
-        userId: string;
-        userName: string;
-        userEmail: string;
+        preToken?: string;
+        userId?: string;
+        userName?: string;
+        userEmail?: string;
         referencePhotoUrl?: string;
       }>('/auth/pre-login', {
         email,
-        password
+        password,
+        deviceId,
+        deviceName: deviceDesc
       });
 
-      setPreLoginData(res);
+      // Se for Administrador com liberação direta (sem biometria)
+      if (res.directLogin && res.token && res.user) {
+        setAuthSession(res.token, res.user);
+        navigate('/');
+        return;
+      }
+
+      setPreLoginData(res as any);
 
       if (res.requireFacialEnrollment) {
-        // Conta existente (ex: Admin) sem foto cadastrada -> cadastrar face
+        // Conta existente sem foto cadastrada -> cadastrar face
         setIsEnrollModalOpen(true);
       } else if (res.requireFacialValidation && res.referencePhotoUrl) {
         // Abrir câmera frontal para validação facial ao vivo
