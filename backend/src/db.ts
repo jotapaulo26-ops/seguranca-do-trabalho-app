@@ -572,11 +572,11 @@ export function initDatabase(): void {
     memoryDb.risk_locations.push(
       {
         id: 'risk_01',
-        name: 'Silos de Grãos e Moenda - Torre Elevadora Superior (Novo Horizonte)',
-        lat: -21.4689,
-        lng: -49.2217,
+        name: 'Moenda & Desfibrador - Torre Elevadora de Bagaço (Usina Santa Isabel)',
+        lat: -21.5084,
+        lng: -49.2083,
         risk_type: 'altura',
-        description: 'Estrutura metálica com 28 metros de altura na unidade de Novo Horizonte-SP. Risco de queda com diferença de nível e intempéries climáticas. Linha de vida obrigatória.',
+        description: 'Estrutura metálica elevada na área industrial da Usina Santa Isabel (Novo Horizonte-SP). Risco de queda em altura superior a 22 metros, vibração mecânica e esteiras rolantes. Linha de vida e trava-quedas obrigatórios.',
         required_epis: ['Cinto Paraquedista', 'Talabarte Duplo', 'Trava-quedas para cabo de aço', 'Capacete c/ jugular', 'Botina de segurança'],
         authorized_employee_ids: ['emp_01', 'emp_02'],
         qr_code_data: 'RISCO_LOC_01',
@@ -585,11 +585,11 @@ export function initDatabase(): void {
       },
       {
         id: 'risk_02',
-        name: 'Galeria Subterrânea de Efluentes e Utilidades (Novo Horizonte)',
-        lat: -21.4720,
-        lng: -49.2205,
+        name: 'Parque de Tanques e Cubas de Fermentação (Usina Santa Isabel)',
+        lat: -21.5076,
+        lng: -49.2092,
         risk_type: 'espaco_confinado',
-        description: 'Profundidade de 4,5m com atmosfera potencialmente deficiente de O2 ou presença de H2S. Obrigatória ventilação mecânica forçada contínua e vigia.',
+        description: 'Espaço confinado interior em dornas e tanques de etanol/mosto na Usina Santa Isabel. Atmosfera com risco de vapores inflamáveis e deficiência de O2. Obrigatória PET NR-33, ventilação mecânica e detector multigases.',
         required_epis: ['Detector 4 Gases (O2, LEL, CO, H2S)', 'Tripé com Guincho Resgatador', 'Cinto de 4 Pontos', 'Exaustor Insuflador de Ar'],
         authorized_employee_ids: ['emp_02', 'emp_04'],
         qr_code_data: 'RISCO_LOC_02',
@@ -598,11 +598,11 @@ export function initDatabase(): void {
       },
       {
         id: 'risk_03',
-        name: 'Tanque de Decantação e Reator Químico R-02 (Novo Horizonte)',
-        lat: -21.4655,
-        lng: -49.2245,
+        name: 'Caldeira a Vapor e Torre de Lavagem de Gases (Usina Santa Isabel)',
+        lat: -21.5089,
+        lng: -49.2075,
         risk_type: 'ambos',
-        description: 'Boca de visita elevada localizada a 6m de altura com acesso ao interior de vaso confinado. Combina risco de queda e atmosfera inflamável.',
+        description: 'Boca de visita e tubulação superior de vapor a 18m de altura na Usina Santa Isabel. Combina trabalho em altura crítica (NR-35) e espaço confinado em tubulão da caldeira (NR-33) com risco térmico.',
         required_epis: ['Cinto Paraquedista e Espaço Confinado', 'Linha de Vida Vertical', 'Detector Multigases', 'Vigia dedicado', 'Tripé resgatador'],
         authorized_employee_ids: ['emp_01', 'emp_02', 'emp_04'],
         qr_code_data: 'RISCO_LOC_03',
@@ -877,9 +877,9 @@ export function initDatabase(): void {
         code: 'EXT-01',
         type: 'PQS_ABC',
         capacity: '6 kg',
-        location_name: 'Almoxarifado Central - Pilar A3 (Novo Horizonte)',
-        lat: -21.4688,
-        lng: -49.2215,
+        location_name: 'Almoxarifado Central & Oficina Mecânica (Usina Santa Isabel)',
+        lat: -21.5093,
+        lng: -49.2070,
         selo_inmetro: 'INMETRO-781923',
         last_recharge_date: '2026-03-10',
         next_recharge_date: '2027-03-10',
@@ -907,9 +907,9 @@ export function initDatabase(): void {
         code: 'EXT-02',
         type: 'CO2',
         capacity: '6 kg',
-        location_name: 'Subestação Elétrica Principal (Novo Horizonte)',
-        lat: -21.4695,
-        lng: -49.2210,
+        location_name: 'Subestação Elétrica Principal (Usina Santa Isabel)',
+        lat: -21.5081,
+        lng: -49.2078,
         selo_inmetro: 'INMETRO-665201',
         last_recharge_date: '2026-01-20',
         next_recharge_date: '2027-01-20',
@@ -937,9 +937,9 @@ export function initDatabase(): void {
         code: 'EXT-03',
         type: 'AGUA',
         capacity: '10 L',
-        location_name: 'Pátio de Cavacos e Biomassa (Novo Horizonte)',
-        lat: -21.4678,
-        lng: -49.2225,
+        location_name: 'Pátio de Cavacos e Biomassa (Usina Santa Isabel)',
+        lat: -21.5079,
+        lng: -49.2065,
         selo_inmetro: 'INMETRO-993214',
         last_recharge_date: '2025-11-05',
         next_recharge_date: '2026-11-05',
@@ -954,9 +954,9 @@ export function initDatabase(): void {
         code: 'EXT-04',
         type: 'PQS_ABC',
         capacity: '12 kg (Carreta)',
-        location_name: 'Tanques de Combustível / Abastecimento (Novo Horizonte)',
-        lat: -21.4660,
-        lng: -49.2235,
+        location_name: 'Tanques de Combustível / Abastecimento (Usina Santa Isabel)',
+        lat: -21.5074,
+        lng: -49.2090,
         selo_inmetro: 'INMETRO-442190',
         last_recharge_date: '2024-09-01',
         next_recharge_date: '2025-09-01',
@@ -978,8 +978,8 @@ export function initDatabase(): void {
         role_in_brigade: 'lider',
         shift: 'Turno A (Manhã)',
         station_location: 'Oficina Central / Sala Elétrica',
-        lat: -21.4685,
-        lng: -49.2212,
+        lat: -21.5085,
+        lng: -49.2080,
         training_cert_code: 'BRIG-2026-SP-901',
         training_date: '2026-04-10',
         training_expiry_date: '2027-04-10',
@@ -992,9 +992,9 @@ export function initDatabase(): void {
         employee_id: 'emp_02',
         role_in_brigade: 'brigadista_combate',
         shift: 'Turno A (Manhã)',
-        station_location: 'Manutenção Mecânica',
-        lat: -21.4690,
-        lng: -49.2220,
+        station_location: 'Moenda & Desfibrador',
+        lat: -21.5084,
+        lng: -49.2082,
         training_cert_code: 'BRIG-2026-SP-902',
         training_date: '2026-04-10',
         training_expiry_date: '2027-04-10',
@@ -1008,8 +1008,8 @@ export function initDatabase(): void {
         role_in_brigade: 'socorrista',
         shift: 'Turno B (Tarde)',
         station_location: 'Setor de Utilidades / Casa de Bombas',
-        lat: -21.4705,
-        lng: -49.2215,
+        lat: -21.5065,
+        lng: -49.2079,
         training_cert_code: 'BRIG-2026-SP-904',
         training_date: '2026-05-15',
         training_expiry_date: '2027-05-15',
@@ -1022,9 +1022,9 @@ export function initDatabase(): void {
         employee_id: 'emp_03',
         role_in_brigade: 'chefe_setor',
         shift: 'Turno A (Manhã)',
-        station_location: 'Caldeiraria & Estruturas',
-        lat: -21.4670,
-        lng: -49.2230,
+        station_location: 'Caldeiraria & Caldeiras',
+        lat: -21.5088,
+        lng: -49.2076,
         training_cert_code: 'BRIG-2024-SP-710',
         training_date: '2024-02-10',
         training_expiry_date: '2025-02-10',
@@ -1041,25 +1041,25 @@ export function initDatabase(): void {
       {
         id: 'mp_01',
         code: 'PE-01',
-        name: 'Ponto de Encontro 01 - Estacionamento Principal da Portaria',
-        lat: -21.4665,
-        lng: -49.2202,
+        name: 'Ponto de Encontro 01 - Pátio Principal Externo da Portaria (Usina Santa Isabel)',
+        lat: -21.5065,
+        lng: -49.2078,
         capacity_people: 150,
         evacuated_sectors: ['Administração', 'Refeitório', 'Portaria', 'Ambulatório', 'Almoxarifado'],
         coordinator_employee_id: 'emp_01',
-        description: 'Área externa descampada pavimentada, longe de linhas de alta tensão e fachadas envidraçadas.',
+        description: 'Área externa descampada pavimentada na portaria da Usina Santa Isabel, longe de linhas de alta tensão e fachadas envidraçadas.',
         created_at: new Date().toISOString()
       },
       {
         id: 'mp_02',
         code: 'PE-02',
-        name: 'Ponto de Encontro 02 - Campo de Apoio Industrial Sul',
-        lat: -21.4725,
-        lng: -49.2225,
+        name: 'Ponto de Encontro 02 - Campo de Apoio Industrial Sul (Usina Santa Isabel)',
+        lat: -21.5098,
+        lng: -49.2062,
         capacity_people: 100,
-        evacuated_sectors: ['Caldeiraria', 'Manutenção Mecânica', 'Utilidades', 'Silos'],
+        evacuated_sectors: ['Caldeiraria', 'Manutenção Mecânica', 'Utilidades', 'Moenda'],
         coordinator_employee_id: 'emp_02',
-        description: 'Área livre gramada próxima ao portão 03 com rota rápida de acesso de viaturas do Corpo de Bombeiros.',
+        description: 'Área livre externa ao lado dos galpões da Usina Santa Isabel com rota rápida de acesso de viaturas do Corpo de Bombeiros.',
         created_at: new Date().toISOString()
       }
     ];
@@ -1083,6 +1083,90 @@ export function initDatabase(): void {
       }
     ];
   }
+
+  // 10. Sincronização automática para coordenadas reais da Usina Santa Isabel (Novo Horizonte-SP)
+  const usinaRisks: Record<string, { lat: number; lng: number; name: string; description: string }> = {
+    risk_01: {
+      lat: -21.5084,
+      lng: -49.2083,
+      name: 'Moenda & Desfibrador - Torre Elevadora de Bagaço (Usina Santa Isabel)',
+      description: 'Estrutura metálica elevada na área industrial da Usina Santa Isabel (Novo Horizonte-SP). Risco de queda em altura superior a 22 metros, vibração mecânica e esteiras rolantes. Linha de vida e trava-quedas obrigatórios.'
+    },
+    risk_02: {
+      lat: -21.5076,
+      lng: -49.2092,
+      name: 'Parque de Tanques e Cubas de Fermentação (Usina Santa Isabel)',
+      description: 'Espaço confinado interior em dornas e tanques de etanol/mosto na Usina Santa Isabel. Atmosfera com risco de vapores inflamáveis e deficiência de O2. Obrigatória PET NR-33, ventilação mecânica e detector multigases.'
+    },
+    risk_03: {
+      lat: -21.5089,
+      lng: -49.2075,
+      name: 'Caldeira a Vapor e Torre de Lavagem de Gases (Usina Santa Isabel)',
+      description: 'Boca de visita e tubulação superior de vapor a 18m de altura na Usina Santa Isabel. Combina trabalho em altura crítica (NR-35) e espaço confinado em tubulão da caldeira (NR-33) com risco térmico.'
+    }
+  };
+
+  (memoryDb.risk_locations || []).forEach(r => {
+    if (usinaRisks[r.id]) {
+      r.lat = usinaRisks[r.id].lat;
+      r.lng = usinaRisks[r.id].lng;
+      r.name = usinaRisks[r.id].name;
+      r.description = usinaRisks[r.id].description;
+    }
+  });
+
+  const usinaExts: Record<string, { lat: number; lng: number; location_name: string }> = {
+    ext_01: { lat: -21.5093, lng: -49.2070, location_name: 'Almoxarifado Central & Oficina Mecânica (Usina Santa Isabel)' },
+    ext_02: { lat: -21.5081, lng: -49.2078, location_name: 'Subestação Elétrica Principal (Usina Santa Isabel)' },
+    ext_03: { lat: -21.5079, lng: -49.2065, location_name: 'Pátio de Cavacos e Biomassa (Usina Santa Isabel)' },
+    ext_04: { lat: -21.5074, lng: -49.2090, location_name: 'Tanques de Combustível / Abastecimento (Usina Santa Isabel)' }
+  };
+
+  (memoryDb.extinguishers || []).forEach(e => {
+    if (usinaExts[e.id]) {
+      e.lat = usinaExts[e.id].lat;
+      e.lng = usinaExts[e.id].lng;
+      e.location_name = usinaExts[e.id].location_name;
+    }
+  });
+
+  const usinaMembers: Record<string, { lat: number; lng: number }> = {
+    bm_01: { lat: -21.5085, lng: -49.2080 },
+    bm_02: { lat: -21.5084, lng: -49.2082 },
+    bm_03: { lat: -21.5065, lng: -49.2079 },
+    bm_04: { lat: -21.5088, lng: -49.2076 }
+  };
+
+  (memoryDb.brigade_members || []).forEach(m => {
+    if (usinaMembers[m.id]) {
+      m.lat = usinaMembers[m.id].lat;
+      m.lng = usinaMembers[m.id].lng;
+    }
+  });
+
+  const usinaMeetingPoints: Record<string, { lat: number; lng: number; name: string; description: string }> = {
+    mp_01: {
+      lat: -21.5065,
+      lng: -49.2078,
+      name: 'Ponto de Encontro 01 - Pátio Principal Externo da Portaria (Usina Santa Isabel)',
+      description: 'Área externa descampada pavimentada na portaria da Usina Santa Isabel, longe de linhas de alta tensão e fachadas envidraçadas.'
+    },
+    mp_02: {
+      lat: -21.5098,
+      lng: -49.2062,
+      name: 'Ponto de Encontro 02 - Campo de Apoio Industrial Sul (Usina Santa Isabel)',
+      description: 'Área livre externa ao lado dos galpões da Usina Santa Isabel com rota rápida de acesso de viaturas do Corpo de Bombeiros.'
+    }
+  };
+
+  (memoryDb.meeting_points || []).forEach(mp => {
+    if (usinaMeetingPoints[mp.id]) {
+      mp.lat = usinaMeetingPoints[mp.id].lat;
+      mp.lng = usinaMeetingPoints[mp.id].lng;
+      mp.name = usinaMeetingPoints[mp.id].name;
+      mp.description = usinaMeetingPoints[mp.id].description;
+    }
+  });
 
   saveDatabase();
 }

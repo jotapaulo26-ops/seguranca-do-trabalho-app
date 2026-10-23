@@ -81,7 +81,7 @@ export const Layout: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row pb-16 md:pb-0">
       {/* DESKTOP SIDEBAR */}
-      <aside className="hidden md:flex flex-col w-64 bg-slate-900 text-white shrink-0 border-r border-slate-800">
+      <aside className="hidden md:flex flex-col w-64 bg-slate-900 text-white shrink-0 border-r border-slate-800 relative z-40">
         {/* Brand Header */}
         <div className="p-5 border-b border-slate-800">
           <div className="flex items-center gap-3">
@@ -162,7 +162,7 @@ export const Layout: React.FC = () => {
       </aside>
 
       {/* MOBILE TOP NAVBAR */}
-      <header className="md:hidden bg-slate-900 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-40 border-b border-slate-800 shadow-md">
+      <header className="md:hidden bg-slate-900 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-50 border-b border-slate-800 shadow-md">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center text-slate-950 font-black text-xs shadow-sm">
             🛡️
@@ -191,7 +191,7 @@ export const Layout: React.FC = () => {
 
       {/* MOBILE DRAWER */}
       {mobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex">
+        <div className="md:hidden fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-sm flex">
           <div className="w-4/5 max-w-xs bg-slate-900 h-full p-4 flex flex-col justify-between shadow-2xl animate-in slide-in-from-left duration-200">
             <div>
               <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-3">
@@ -256,7 +256,7 @@ export const Layout: React.FC = () => {
       )}
 
       {/* MAIN CONTENT WRAPPER */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+      <main className="flex-1 flex flex-col min-w-0 overflow-y-auto relative z-0">
         {/* Critical Alerts Banner (Top of page) */}
         {alertSummary.totalExpired > 0 && (
           <div className="bg-red-50 border-b border-red-200 px-4 py-2.5 flex items-center justify-between text-xs text-red-800">
@@ -281,7 +281,7 @@ export const Layout: React.FC = () => {
       </main>
 
       {/* MOBILE BOTTOM NAVIGATION BAR (Thumb-friendly for smartphone workers) */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 px-2 py-1.5 flex items-center justify-around shadow-lg">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 px-2 py-1.5 flex items-center justify-around shadow-lg">
         <NavLink
           to="/"
           className={({ isActive }) =>

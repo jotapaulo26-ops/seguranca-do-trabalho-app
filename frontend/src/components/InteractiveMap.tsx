@@ -58,9 +58,9 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   onGenerateApr,
   onShowQrCode,
   height = '580px',
-  // Default centered in Novo Horizonte - SP
-  initialCenter = [-21.4689, -49.2217],
-  zoom = 15
+  // Default centered in Usina Santa Isabel (Novo Horizonte - SP)
+  initialCenter = [-21.5083, -49.2081],
+  zoom = 16
 }) => {
   const [filterType, setFilterType] = useState<string>('all');
   const [clickedCoords, setClickedCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -81,15 +81,15 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   };
 
   return (
-    <div className="relative rounded-3xl overflow-hidden shadow-xl border-2 border-slate-700/50">
+    <div className="relative isolate z-0 rounded-3xl overflow-hidden shadow-xl border-2 border-slate-700/50">
       {/* Top Filter Bar, Satellite Switcher, and Location Badge */}
-      <div className="absolute top-3 left-3 right-3 z-[1000] flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+      <div className="absolute top-3 left-3 right-3 z-20 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
         {/* Left side: Location Badge and Satellite Mode Switcher */}
         <div className="flex flex-wrap items-center gap-2 pointer-events-auto">
-          {/* Novo Horizonte - SP Location Badge */}
+          {/* Usina Santa Isabel - Novo Horizonte Location Badge */}
           <div className="bg-slate-950/90 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-lg flex items-center gap-1.5 border border-slate-700 backdrop-blur-sm">
             <MapPin className="w-3.5 h-3.5 text-amber-400" />
-            <span>Novo Horizonte - SP</span>
+            <span>Usina Santa Isabel - Novo Horizonte</span>
           </div>
 
           {/* Satellite vs Streets View Switcher */}

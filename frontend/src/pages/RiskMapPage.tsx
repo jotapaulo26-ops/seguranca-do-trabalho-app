@@ -36,10 +36,10 @@ const COMMON_EPIS = [
   'Máscara com Filtro Químico'
 ];
 
-// Default coordinates for Novo Horizonte - SP
-const NOVO_HORIZONTE_COORDS = {
-  lat: -21.4689,
-  lng: -49.2217
+// Default coordinates for Usina Santa Isabel (Novo Horizonte - SP)
+const USINA_SANTA_ISABEL_COORDS = {
+  lat: -21.5083,
+  lng: -49.2081
 };
 
 export const RiskMapPage: React.FC = () => {
@@ -59,8 +59,8 @@ export const RiskMapPage: React.FC = () => {
   // Form states for creating a new spot
   const [formData, setFormData] = useState({
     name: '',
-    lat: NOVO_HORIZONTE_COORDS.lat,
-    lng: NOVO_HORIZONTE_COORDS.lng,
+    lat: USINA_SANTA_ISABEL_COORDS.lat,
+    lng: USINA_SANTA_ISABEL_COORDS.lng,
     risk_type: 'altura' as 'altura' | 'espaco_confinado' | 'ambos',
     description: '',
     required_epis: [] as string[],
@@ -189,8 +189,8 @@ export const RiskMapPage: React.FC = () => {
             onClick={() => {
               setFormData({
                 name: '',
-                lat: NOVO_HORIZONTE_COORDS.lat,
-                lng: NOVO_HORIZONTE_COORDS.lng,
+                lat: USINA_SANTA_ISABEL_COORDS.lat,
+                lng: USINA_SANTA_ISABEL_COORDS.lng,
                 risk_type: 'altura',
                 description: '',
                 required_epis: [],
@@ -215,14 +215,14 @@ export const RiskMapPage: React.FC = () => {
           onAddPointClick={handleMapClick}
           onGenerateApr={handleGenerateAprForSpot}
           onShowQrCode={(loc) => setQrModalLocation(loc)}
-          initialCenter={[-21.4689, -49.2217]}
-          zoom={15}
+          initialCenter={[-21.5083, -49.2081]}
+          zoom={16}
           height="600px"
         />
 
         {/* SPOT DETAIL MODAL / DRAWER (Always floating directly in FRONT of the map) */}
         {selectedLocation && (
-          <div className="fixed inset-0 z-[99990] bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[99999] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
               <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
                 <div>
@@ -319,7 +319,7 @@ export const RiskMapPage: React.FC = () => {
               <div>
                 <h3 className="font-extrabold text-slate-900 text-base flex items-center gap-2">
                   <MapPin className="w-5 h-5 text-amber-500" />
-                  Cadastrar Ponto de Risco em Novo Horizonte-SP
+                  Cadastrar Ponto de Risco na Usina Santa Isabel
                 </h3>
                 <p className="text-[11px] text-slate-500">
                   Localização clicada no mapa pronta para cadastro

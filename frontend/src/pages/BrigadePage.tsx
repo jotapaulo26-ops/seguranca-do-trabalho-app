@@ -42,7 +42,7 @@ import {
   Users
 } from 'lucide-react';
 
-const NOVO_HORIZONTE_COORDS: [number, number] = [-21.4689, -49.2217];
+const USINA_SANTA_ISABEL_COORDS: [number, number] = [-21.5083, -49.2081];
 
 // Custom Leaflet Markers for Brigade Elements
 function createExtinguisherIcon(status: string) {
@@ -146,8 +146,8 @@ export const BrigadePage: React.FC = () => {
     type: 'PQS_ABC' as Extinguisher['type'],
     capacity: '4 kg',
     location_name: '',
-    lat: NOVO_HORIZONTE_COORDS[0],
-    lng: NOVO_HORIZONTE_COORDS[1],
+    lat: USINA_SANTA_ISABEL_COORDS[0],
+    lng: USINA_SANTA_ISABEL_COORDS[1],
     selo_inmetro: '',
     next_recharge_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     hydrostatic_test_date: new Date(Date.now() + 5 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
@@ -172,8 +172,8 @@ export const BrigadePage: React.FC = () => {
   const [pointForm, setPointForm] = useState({
     code: '',
     name: '',
-    lat: NOVO_HORIZONTE_COORDS[0],
-    lng: NOVO_HORIZONTE_COORDS[1],
+    lat: USINA_SANTA_ISABEL_COORDS[0],
+    lng: USINA_SANTA_ISABEL_COORDS[1],
     capacity_people: 80,
     evacuated_sectors: '',
     coordinator_employee_id: '',
@@ -315,8 +315,8 @@ export const BrigadePage: React.FC = () => {
         type: 'PQS_ABC',
         capacity: '4 kg',
         location_name: '',
-        lat: NOVO_HORIZONTE_COORDS[0],
-        lng: NOVO_HORIZONTE_COORDS[1],
+        lat: USINA_SANTA_ISABEL_COORDS[0],
+        lng: USINA_SANTA_ISABEL_COORDS[1],
         selo_inmetro: '',
         next_recharge_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         hydrostatic_test_date: new Date(Date.now() + 5 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
@@ -394,8 +394,8 @@ export const BrigadePage: React.FC = () => {
       setPointForm({
         code: '',
         name: '',
-        lat: NOVO_HORIZONTE_COORDS[0],
-        lng: NOVO_HORIZONTE_COORDS[1],
+        lat: USINA_SANTA_ISABEL_COORDS[0],
+        lng: USINA_SANTA_ISABEL_COORDS[1],
         capacity_people: 80,
         evacuated_sectors: '',
         coordinator_employee_id: '',
@@ -647,18 +647,18 @@ export const BrigadePage: React.FC = () => {
       </div>
 
       {/* ======================================================== */}
-      {/* TAB 1: MAPA TÁTICO (SATELLITE VIEW NOVO HORIZONTE-SP) */}
+      {/* TAB 1: MAPA TÁTICO (SATELLITE VIEW USINA SANTA ISABEL - NOVO HORIZONTE) */}
       {/* ======================================================== */}
       {activeTab === 'mapa' && (
         <div className="space-y-4">
-          <div className="relative rounded-3xl overflow-hidden shadow-xl border-2 border-slate-700/50">
+          <div className="relative isolate z-0 rounded-3xl overflow-hidden shadow-xl border-2 border-slate-700/50">
             {/* Top Controls on Map */}
-            <div className="absolute top-3 left-3 right-3 z-[1000] flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+            <div className="absolute top-3 left-3 right-3 z-20 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
               {/* Left: Location & Layer Filter */}
               <div className="flex flex-wrap items-center gap-2 pointer-events-auto">
                 <div className="bg-slate-950/90 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-lg flex items-center gap-1.5 border border-slate-700 backdrop-blur-sm">
                   <MapPin className="w-3.5 h-3.5 text-red-500" />
-                  <span>Novo Horizonte - SP</span>
+                  <span>Usina Santa Isabel - Novo Horizonte</span>
                 </div>
 
                 {/* Layer pills */}
@@ -723,14 +723,14 @@ export const BrigadePage: React.FC = () => {
             </div>
 
             {/* Click to add hint banner */}
-            <div className="absolute bottom-3 left-3 z-[1000] bg-slate-950/80 text-slate-200 text-[11px] px-3 py-1.5 rounded-xl border border-slate-700 shadow-md backdrop-blur-sm pointer-events-none">
+            <div className="absolute bottom-3 left-3 z-20 bg-slate-950/80 text-slate-200 text-[11px] px-3 py-1.5 rounded-xl border border-slate-700 shadow-md backdrop-blur-sm pointer-events-none">
               💡 Clique em qualquer ponto do mapa para marcar novo extintor ou ponto de encontro
             </div>
 
             {/* LEAFLET MAP CONTAINER */}
             <div style={{ height: '620px', width: '100%' }}>
               <MapContainer
-                center={NOVO_HORIZONTE_COORDS}
+                center={USINA_SANTA_ISABEL_COORDS}
                 zoom={16}
                 scrollWheelZoom={true}
                 style={{ height: '100%', width: '100%', background: '#0f172a' }}
