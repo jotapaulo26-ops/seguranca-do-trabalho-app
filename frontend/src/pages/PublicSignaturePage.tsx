@@ -518,6 +518,7 @@ export const PublicSignaturePage: React.FC = () => {
           onClose={() => setCameraModalOpen(false)}
           onCapture={handlePhotoCapture}
           workerName={workerName}
+          referencePhotoUrl={workerReferencePhoto}
           title="Selfie de Presença do Executante"
         />
       </div>

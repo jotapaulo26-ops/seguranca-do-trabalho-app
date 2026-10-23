@@ -968,6 +968,7 @@ export const SignatureModalCenter: React.FC<SignatureModalCenterProps> = ({
           onClose={() => setCameraModalOpen(false)}
           onCapture={handlePhotoCapture}
           workerName={selectedWorker?.name}
+          referencePhotoUrl={workerReferencePhoto}
           title="Biometria Facial na Homologação"
         />
       </div>
