@@ -85,14 +85,50 @@ export interface RiskLocation {
 
 export interface DigitalSignature {
   id: string;
+  employeeId?: string;
   signerName: string;
   signerRole: string;
-  signerType: 'supervisor' | 'executante' | 'vigia';
+  signerCpf?: string;
+  signerType: 'supervisor' | 'executante' | 'vigia' | 'encarregado';
   signatureDataUrl: string;
+  photoDataUrl?: string;
   signedAt: string;
   signedByUserId?: string;
   deviceId?: string;
+  deviceName?: string;
   ipAddress?: string;
+}
+
+export interface RequiredSigner {
+  id: string;
+  name: string;
+  role: string;
+  cpf?: string;
+  type: 'supervisor' | 'executante' | 'vigia' | 'encarregado';
+  isSupervisor?: boolean;
+}
+
+export interface DocumentSignatureStatus {
+  totalRequired: number;
+  totalSigned: number;
+  percentage: number;
+  status: 'pendente' | 'parcial' | 'homologado';
+  isFullySigned: boolean;
+  pendingWorkers: RequiredSigner[];
+  signedWorkers: {
+    id: string;
+    name: string;
+    role: string;
+    cpf?: string;
+    type: string;
+    isSupervisor?: boolean;
+    signedAt: string;
+    signatureDataUrl: string;
+    photoDataUrl?: string;
+    deviceId?: string;
+    ipAddress?: string;
+  }[];
+  requiredWorkers: RequiredSigner[];
 }
 
 export interface DocumentRecord {
@@ -108,7 +144,8 @@ export interface DocumentRecord {
   employee_name?: string;
   apr_id?: string;
   linked_apr_code?: string;
-  status: 'rascunho' | 'ativa' | 'encerrada' | 'cancelada';
+  status: 'rascunho' | 'ativa' | 'encerrada' | 'cancelada' | 'homologado';
+  signatureStatus?: DocumentSignatureStatus;
   data: any;
   device_id?: string;
   device_name?: string;

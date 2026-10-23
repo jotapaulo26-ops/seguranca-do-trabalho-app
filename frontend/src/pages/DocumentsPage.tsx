@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { DocumentRecord } from '../types';
 import { generateAprPdf } from '../services/aprPdfGenerator';
 import { generateDocumentPdf } from '../services/documentPdfGenerator';
-import { SignaturePad } from '../components/SignaturePad';
+import { SignatureModalCenter } from '../components/SignatureModalCenter';
 import {
   FileText,
   Plus,
@@ -24,7 +24,11 @@ import {
   Zap,
   HardHat,
   ClipboardCheck,
-  Award
+  Award,
+  AlertTriangle,
+  Lock,
+  Users,
+  Check
 } from 'lucide-react';
 
 export const DocumentsPage: React.FC = () => {
@@ -37,6 +41,7 @@ export const DocumentsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [signatureFilter, setSignatureFilter] = useState<'ALL' | 'pendente' | 'parcial' | 'homologado'>('ALL');
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
 
   // Signature modal state
@@ -102,6 +107,10 @@ export const DocumentsPage: React.FC = () => {
     }
   };
 
+  const countHomologados = documents.filter(d => d.signatureStatus?.status === 'homologado').length;
+  const countParciais = documents.filter(d => d.signatureStatus?.status === 'parcial').length;
+  const countPendentes = documents.filter(d => !d.signatureStatus || d.signatureStatus?.status === 'pendente').length;
+
   const filteredDocs = documents.filter(doc => {
     let matchesTab = true;
     if (activeTab === 'APR') {
@@ -124,7 +133,12 @@ export const DocumentsPage: React.FC = () => {
 
     const matchesStatus = statusFilter === 'ALL' || doc.status === statusFilter;
 
-    return matchesTab && matchesSearch && matchesStatus;
+    const matchesSig =
+      signatureFilter === 'ALL' ||
+      (doc.signatureStatus && doc.signatureStatus.status === signatureFilter) ||
+      (signatureFilter === 'pendente' && (!doc.signatureStatus || doc.signatureStatus.status === 'pendente'));
+
+    return matchesTab && matchesSearch && matchesStatus && matchesSig;
   });
 
   return (
@@ -150,6 +164,117 @@ export const DocumentsPage: React.FC = () => {
             Emitir Documento SST
           </button>
         )}
+      </div>
+
+      {/* MOSTRADOR DE ASSINATURAS E HOMOLOGAÇÃO SST (3 KPI Cards) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <button
+          onClick={() => setSignatureFilter(signatureFilter === 'homologado' ? 'ALL' : 'homologado')}
+          className={`p-4 rounded-2xl border transition-all text-left flex items-center justify-between cursor-pointer ${
+            signatureFilter === 'homologado'
+              ? 'bg-emerald-500 text-white border-emerald-600 shadow-md ring-2 ring-emerald-400'
+              : 'bg-white hover:bg-emerald-50/50 border-slate-200 text-slate-800 shadow-sm'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg shrink-0 ${
+                signatureFilter === 'homologado' ? 'bg-white text-emerald-600' : 'bg-emerald-100 text-emerald-700'
+              }`}
+            >
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+            <div>
+              <p
+                className={`text-[11px] font-bold uppercase tracking-wider ${
+                  signatureFilter === 'homologado' ? 'text-emerald-100' : 'text-slate-500'
+                }`}
+              >
+                100% Homologados
+              </p>
+              <h3 className="text-xl font-black leading-none mt-0.5">{countHomologados}</h3>
+            </div>
+          </div>
+          <span
+            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+              signatureFilter === 'homologado' ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-800'
+            }`}
+          >
+            Liberados
+          </span>
+        </button>
+
+        <button
+          onClick={() => setSignatureFilter(signatureFilter === 'parcial' ? 'ALL' : 'parcial')}
+          className={`p-4 rounded-2xl border transition-all text-left flex items-center justify-between cursor-pointer ${
+            signatureFilter === 'parcial'
+              ? 'bg-amber-500 text-slate-950 border-amber-600 shadow-md ring-2 ring-amber-400'
+              : 'bg-white hover:bg-amber-50/50 border-slate-200 text-slate-800 shadow-sm'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg shrink-0 ${
+                signatureFilter === 'parcial' ? 'bg-slate-950 text-amber-400' : 'bg-amber-100 text-amber-700'
+              }`}
+            >
+              <Clock className="w-5 h-5" />
+            </div>
+            <div>
+              <p
+                className={`text-[11px] font-bold uppercase tracking-wider ${
+                  signatureFilter === 'parcial' ? 'text-amber-950/80' : 'text-slate-500'
+                }`}
+              >
+                Assinatura Parcial
+              </p>
+              <h3 className="text-xl font-black leading-none mt-0.5">{countParciais}</h3>
+            </div>
+          </div>
+          <span
+            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+              signatureFilter === 'parcial' ? 'bg-amber-600 text-white' : 'bg-amber-100 text-amber-900'
+            }`}
+          >
+            Em Coleta
+          </span>
+        </button>
+
+        <button
+          onClick={() => setSignatureFilter(signatureFilter === 'pendente' ? 'ALL' : 'pendente')}
+          className={`p-4 rounded-2xl border transition-all text-left flex items-center justify-between cursor-pointer ${
+            signatureFilter === 'pendente'
+              ? 'bg-red-500 text-white border-red-600 shadow-md ring-2 ring-red-400'
+              : 'bg-white hover:bg-red-50/50 border-slate-200 text-slate-800 shadow-sm'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg shrink-0 ${
+                signatureFilter === 'pendente' ? 'bg-white text-red-600' : 'bg-red-100 text-red-700'
+              }`}
+            >
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div>
+              <p
+                className={`text-[11px] font-bold uppercase tracking-wider ${
+                  signatureFilter === 'pendente' ? 'text-red-100' : 'text-slate-500'
+                }`}
+              >
+                Pendentes de Assinatura
+              </p>
+              <h3 className="text-xl font-black leading-none mt-0.5">{countPendentes}</h3>
+            </div>
+          </div>
+          <span
+            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+              signatureFilter === 'pendente' ? 'bg-red-600 text-white' : 'bg-red-100 text-red-800'
+            }`}
+          >
+            Bloqueados
+          </span>
+        </button>
       </div>
 
       {/* Category Tabs */}
@@ -259,7 +384,17 @@ export const DocumentsPage: React.FC = () => {
       ) : (
         <div className="space-y-3">
           {filteredDocs.map(doc => {
-            const signaturesCount = doc.data?.signatures?.length || 0;
+            const sigStatus = doc.signatureStatus || {
+              totalRequired: 1,
+              totalSigned: 0,
+              percentage: 0,
+              status: 'pendente',
+              isFullySigned: false,
+              pendingWorkers: [],
+              signedWorkers: []
+            };
+            const isHomologated = sigStatus.status === 'homologado';
+
             return (
               <div
                 key={doc.id}
@@ -301,16 +436,27 @@ export const DocumentsPage: React.FC = () => {
                         : doc.type.replace('APR_', 'APR ').replace('_', ' ')}
                     </span>
 
-                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
-                      {doc.status}
-                    </span>
-
-                    {signaturesCount > 0 && (
-                      <span className="text-[10px] bg-slate-100 text-slate-700 font-medium px-2 py-0.5 rounded-full flex items-center gap-1">
-                        <PenTool className="w-3 h-3 text-emerald-600" />
-                        {signaturesCount} Assinatura(s)
+                    {/* Mostrador Visual de Assinatura no Card */}
+                    {isHomologated ? (
+                      <span className="text-[10px] bg-emerald-100 text-emerald-900 border border-emerald-300 font-black px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        100% Homologado ({sigStatus.totalSigned}/{sigStatus.totalRequired})
+                      </span>
+                    ) : sigStatus.status === 'parcial' ? (
+                      <span className="text-[10px] bg-amber-100 text-amber-950 border border-amber-300 font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                        <Clock className="w-3.5 h-3.5 text-amber-600" />
+                        Assinatura Parcial ({sigStatus.totalSigned}/{sigStatus.totalRequired} • {sigStatus.percentage}%)
+                      </span>
+                    ) : (
+                      <span className="text-[10px] bg-red-100 text-red-900 border border-red-300 font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 animate-pulse">
+                        <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
+                        Pendente de Assinaturas (0/{sigStatus.totalRequired})
                       </span>
                     )}
+
+                    <span className="text-[10px] bg-slate-100 text-slate-600 font-semibold px-2 py-0.5 rounded-full">
+                      Status: {doc.status}
+                    </span>
                   </div>
 
                   <h3 className="font-bold text-slate-900 text-sm md:text-base leading-snug mb-1">
@@ -330,6 +476,27 @@ export const DocumentsPage: React.FC = () => {
                     </div>
                   )}
 
+                  {/* Pending Workers Mini Badges */}
+                  {!isHomologated && sigStatus.pendingWorkers?.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5 text-[11px] text-slate-500">
+                      <span className="text-[10px] font-bold text-slate-400">Falta assinar:</span>
+                      {sigStatus.pendingWorkers.slice(0, 3).map((w, idx) => (
+                        <span
+                          key={idx}
+                          className="bg-amber-50 text-amber-900 border border-amber-200 px-2 py-0.5 rounded-lg text-[10px] font-semibold flex items-center gap-1"
+                        >
+                          <Clock className="w-3 h-3 text-amber-600" />
+                          {w.name}
+                        </span>
+                      ))}
+                      {sigStatus.pendingWorkers.length > 3 && (
+                        <span className="text-[10px] text-slate-400 font-semibold">
+                          +{sigStatus.pendingWorkers.length - 3} outros
+                        </span>
+                      )}
+                    </div>
+                  )}
+
                   <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-400 mt-2">
                     <span>Emitido por: <strong className="text-slate-600">{doc.created_by_name}</strong></span>
                     <span>Data: {new Date(doc.created_at).toLocaleDateString('pt-BR')}</span>
@@ -344,34 +511,55 @@ export const DocumentsPage: React.FC = () => {
 
                 {/* Actions */}
                 <div className="flex flex-wrap items-center gap-2 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100">
-                  {/* If APR, quick button to issue PT */}
+                  {/* Trava de Segurança SST para Geração de PT */}
                   {doc.type.startsWith('APR_') && (
-                    <button
-                      onClick={() => navigate(`/documentos/novo?type=PT&aprId=${doc.id}`)}
-                      className="py-2 px-3 bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors border border-red-200"
-                      title="Emitir Permissão de Trabalho vinculada a esta APR"
-                    >
-                      <Zap className="w-3.5 h-3.5" />
-                      Gerar PT
-                    </button>
+                    isHomologated ? (
+                      <button
+                        onClick={() => navigate(`/documentos/novo?type=PT&aprId=${doc.id}`)}
+                        className="py-2 px-3 bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors border border-red-200 shadow-sm"
+                        title="APR 100% Homologada! Clique para emitir a Permissão de Trabalho (PT)"
+                      >
+                        <Zap className="w-3.5 h-3.5" />
+                        Gerar PT
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          const pendings = sigStatus.pendingWorkers?.map(w => w.name).join(', ') || 'equipe';
+                          alert(
+                            `⛔ BLOQUEIO OPERACIONAL SST:\nNão é permitido gerar Permissão de Trabalho (PT) enquanto a APR ${doc.code} não estiver 100% homologada.\n\nAssinaturas ainda pendentes: ${pendings}.\n\nClique no botão "Assinaturas" para coletar as assinaturas dos colaboradores antes de emitir a PT.`
+                          );
+                        }}
+                        className="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-400 hover:text-slate-600 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors border border-slate-200"
+                        title="Bloqueio de Segurança: A APR precisa de 100% das assinaturas para liberar a emissão da PT"
+                      >
+                        <Lock className="w-3.5 h-3.5 text-amber-500" />
+                        PT Bloqueada
+                      </button>
+                    )
                   )}
 
                   <button
                     onClick={() => handleDownloadPdf(doc)}
                     className="py-2 px-3.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-sm transition-colors"
-                    title="Baixar em PDF oficial formatado"
+                    title="Baixar em PDF oficial formatado com quadro de assinaturas"
                   >
                     <Download className="w-4 h-4" />
                     Gerar PDF
                   </button>
 
+                  {/* Botão de Central de Assinaturas & Homologação */}
                   <button
                     onClick={() => setSignModalDoc(doc)}
-                    className="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs rounded-xl flex items-center gap-1.5 transition-colors"
-                    title="Assinar digitalmente"
+                    className={`py-2 px-3 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all shadow-sm ${
+                      isHomologated
+                        ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300'
+                        : 'bg-slate-900 hover:bg-slate-800 text-amber-400'
+                    }`}
+                    title="Abrir Central de Assinaturas da Equipe"
                   >
-                    <PenTool className="w-3.5 h-3.5 text-amber-600" />
-                    Assinar
+                    <PenTool className="w-3.5 h-3.5" />
+                    <span>Assinaturas ({sigStatus.totalSigned}/{sigStatus.totalRequired})</span>
                   </button>
 
                   <button
@@ -397,16 +585,16 @@ export const DocumentsPage: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL: DIGITAL SIGNATURE */}
+      {/* MODAL: CENTRAL DE ASSINATURAS POR COLABORADOR (z-[99999]) */}
       {signModalDoc && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <SignaturePad
-            title={`Assinar Documento ${signModalDoc.code}`}
-            signerNameDefault={user?.name}
-            onSave={handleSaveSignature}
-            onCancel={() => setSignModalDoc(null)}
-          />
-        </div>
+        <SignatureModalCenter
+          document={signModalDoc}
+          onClose={() => setSignModalDoc(null)}
+          onSignatureSaved={(updatedDoc) => {
+            loadDocuments();
+            setSignModalDoc(updatedDoc);
+          }}
+        />
       )}
 
       {/* MODAL: DOCUMENT DETAILS */}

@@ -91,6 +91,22 @@ export interface RiskLocation {
   created_at: string;
 }
 
+export interface DigitalSignature {
+  id: string;
+  employeeId?: string;
+  signerName: string;
+  signerRole: string;
+  signerCpf?: string;
+  signerType: 'supervisor' | 'executante' | 'vigia' | 'encarregado';
+  signatureDataUrl: string;
+  photoDataUrl?: string;
+  signedAt: string;
+  signedByUserId?: string;
+  deviceId?: string;
+  deviceName?: string;
+  ipAddress?: string;
+}
+
 export interface DocumentRecord {
   id: string;
   code: string;
@@ -100,8 +116,9 @@ export interface DocumentRecord {
   location_id?: string;
   employee_id?: string;
   apr_id?: string;
-  status: 'rascunho' | 'ativa' | 'encerrada' | 'cancelada';
+  status: 'rascunho' | 'ativa' | 'encerrada' | 'cancelada' | 'homologado';
   data: any; // Dynamic JSON for APR/PT/OS/EPI/Checklist fields
+  signatureStatus?: any;
   device_id?: string;
   device_name?: string;
   ip_address?: string;

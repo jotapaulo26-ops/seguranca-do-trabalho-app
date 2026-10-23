@@ -608,34 +608,59 @@ function renderSignaturesSection(
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(9.5);
   pdf.setTextColor(15, 23, 42);
-  pdf.text('ASSINATURAS DIGITAIS E CONFORMIDADE', margin, startY);
+  pdf.text('ASSINATURAS DIGITAIS E CONFORMIDADE SST', margin, startY);
   startY += 4;
 
   defaultSigners.forEach((signer, idx) => {
     const x = margin + idx * (boxWidth + 10);
     pdf.setDrawColor(203, 213, 225);
     pdf.setFillColor(248, 250, 252);
-    pdf.roundedRect(x, startY, boxWidth, 26, 2, 2, 'FD');
+    pdf.roundedRect(x, startY, boxWidth, 30, 2, 2, 'FD');
+
+    // Title / Cargo
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(7.5);
+    pdf.setTextColor(15, 23, 42);
+    pdf.text(signer.title.toUpperCase(), x + 3, startY + 4.5);
 
     // Check if matching signature data URL exists
-    const matchingSig = signatures[idx] || (signatures.length === 1 && idx === 0 ? signatures[0] : null);
+    const matchingSig = signatures.find((s: any) =>
+      (s.signerName && signer.name && s.signerName.toLowerCase() === signer.name.toLowerCase()) ||
+      (idx === 0 && s.signerType === 'supervisor') ||
+      (idx > 0 && s.signerType !== 'supervisor')
+    ) || signatures[idx];
+
     if (matchingSig && matchingSig.signatureDataUrl) {
       try {
-        pdf.addImage(matchingSig.signatureDataUrl, 'PNG', x + 15, startY + 2, boxWidth - 30, 14);
+        pdf.addImage(matchingSig.signatureDataUrl, 'PNG', x + 5, startY + 6, boxWidth - (matchingSig.photoDataUrl ? 30 : 15), 14);
       } catch (e) {
-        // Fallback text
+        pdf.text('[Assinatura Digital Registrada]', x + 5, startY + 14);
       }
+
+      if (matchingSig.photoDataUrl) {
+        try {
+          pdf.addImage(matchingSig.photoDataUrl, 'JPEG', x + boxWidth - 18, startY + 6, 14, 14);
+        } catch (e) {}
+      }
+    } else {
+      pdf.setFont('helvetica', 'italic');
+      pdf.setFontSize(7.5);
+      pdf.setTextColor(220, 38, 38);
+      pdf.text('[PENDENTE DE ASSINATURA]', x + 5, startY + 14);
     }
 
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(8);
+    pdf.setFontSize(7.5);
     pdf.setTextColor(15, 23, 42);
-    pdf.text(signer.name, x + boxWidth / 2, startY + 20, { align: 'center' });
+    pdf.text(signer.name, x + 3, startY + 23);
 
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(7);
+    pdf.setFontSize(6);
     pdf.setTextColor(100, 116, 139);
-    pdf.text(signer.title, x + boxWidth / 2, startY + 24, { align: 'center' });
+    const timeInfo = matchingSig
+      ? `Data: ${new Date(matchingSig.signedAt).toLocaleDateString('pt-BR')} ${new Date(matchingSig.signedAt).toLocaleTimeString('pt-BR')} • ID: ${matchingSig.deviceId || 'WEB'}`
+      : 'Aguardando validação do colaborador';
+    pdf.text(timeInfo.substring(0, 60), x + 3, startY + 27);
   });
 }
 

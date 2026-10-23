@@ -52,9 +52,202 @@ function validateWorkerTrainings(workerIds: string[], workTypes: string[]): { va
   return { valid: errors.length === 0, errors };
 }
 
+export interface RequiredSigner {
+  id: string;
+  name: string;
+  role: string;
+  cpf?: string;
+  type: 'supervisor' | 'executante' | 'vigia' | 'encarregado';
+  isSupervisor?: boolean;
+}
+
+export interface DocumentSignatureStatus {
+  totalRequired: number;
+  totalSigned: number;
+  percentage: number;
+  status: 'pendente' | 'parcial' | 'homologado';
+  isFullySigned: boolean;
+  pendingWorkers: RequiredSigner[];
+  signedWorkers: {
+    id: string;
+    name: string;
+    role: string;
+    cpf?: string;
+    type: string;
+    isSupervisor?: boolean;
+    signedAt: string;
+    signatureDataUrl: string;
+    photoDataUrl?: string;
+    deviceId?: string;
+    ipAddress?: string;
+  }[];
+  requiredWorkers: RequiredSigner[];
+}
+
+// Helper to calculate exact signature progress and status
+export function calculateSignatureStatus(doc: DocumentRecord): DocumentSignatureStatus {
+  const required: RequiredSigner[] = [];
+  const signatures = Array.isArray(doc.data?.signatures) ? doc.data.signatures : [];
+
+  // 1. Supervisor / Emissor is always required
+  const supervisorName = doc.created_by_name || 'Supervisor SST';
+  required.push({
+    id: `supervisor_${doc.created_by_user_id || 'admin'}`,
+    name: supervisorName,
+    role: 'Supervisor / Responsável Emissor',
+    type: 'supervisor',
+    isSupervisor: true
+  });
+
+  // 2. Add specific workers depending on document type
+  if (doc.type.startsWith('APR_') || doc.type === 'PT' || doc.type === 'PET') {
+    if (Array.isArray(doc.data?.authorizedWorkers) && doc.data.authorizedWorkers.length > 0) {
+      const allEmployees = db.employees.find();
+      doc.data.authorizedWorkers.forEach((w: any) => {
+        let workerId = typeof w === 'string' ? w : w?.id;
+        let workerName = typeof w === 'string' ? '' : w?.name;
+        let workerRole = typeof w === 'string' ? '' : w?.role;
+        let workerCpf = typeof w === 'string' ? '' : w?.cpf;
+
+        if (workerId) {
+          const emp = allEmployees.find(e => e.id === workerId);
+          if (emp) {
+            workerName = workerName || emp.name;
+            workerRole = workerRole || emp.role;
+            workerCpf = workerCpf || emp.cpf;
+          }
+        }
+
+        if (workerName && workerName !== 'System.Collections.Hashtable') {
+          required.push({
+            id: workerId || `worker_${workerName}`,
+            name: workerName,
+            role: workerRole || 'Executante Autorizado',
+            cpf: workerCpf,
+            type: 'executante',
+            isSupervisor: false
+          });
+        }
+      });
+    }
+
+    if (doc.data?.watchName) {
+      required.push({
+        id: `watch_${doc.id}`,
+        name: doc.data.watchName,
+        role: 'Vigia de Espaço Confinado (NR-33)',
+        type: 'vigia',
+        isSupervisor: false
+      });
+    }
+  } else if (doc.type === 'OS' || doc.type === 'OSS') {
+    const empName = doc.data?.employee?.name || doc.employee_name || 'Colaborador';
+    const empId = doc.data?.employee?.id || doc.employee_id || `emp_${doc.id}`;
+    const empRole = doc.data?.employee?.role || 'Trabalhador Designado';
+    required.push({
+      id: empId,
+      name: empName,
+      role: empRole,
+      cpf: doc.data?.employee?.cpf,
+      type: 'executante',
+      isSupervisor: false
+    });
+  } else if (doc.type === 'EPI_FICHA') {
+    const empName = doc.data?.employee?.name || doc.employee_name || 'Colaborador';
+    const empId = doc.data?.employee?.id || doc.employee_id || `emp_${doc.id}`;
+    const empRole = doc.data?.employee?.role || 'Recebedor do EPI';
+    required.push({
+      id: empId,
+      name: empName,
+      role: empRole,
+      cpf: doc.data?.employee?.cpf,
+      type: 'executante',
+      isSupervisor: false
+    });
+  } else if (doc.type === 'CHECKLIST' || doc.type === 'INSPECAO') {
+    const inspectorName = doc.data?.inspectorName || 'Inspetor de Campo';
+    required.push({
+      id: `inspector_${doc.id}`,
+      name: inspectorName,
+      role: 'Inspetor de Campo',
+      type: 'executante',
+      isSupervisor: false
+    });
+  }
+
+  // Deduplicate required signers if any duplicate id
+  const uniqueRequired: RequiredSigner[] = [];
+  const seenIds = new Set<string>();
+  for (const r of required) {
+    if (!seenIds.has(r.id)) {
+      seenIds.add(r.id);
+      uniqueRequired.push(r);
+    }
+  }
+
+  // Match signatures against required signers
+  const signedWorkers: any[] = [];
+  const pendingWorkers: RequiredSigner[] = [];
+
+  for (const reqSigner of uniqueRequired) {
+    const foundSig = signatures.find((sig: any) => {
+      if (reqSigner.isSupervisor && (sig.signerType === 'supervisor' || sig.signerName?.toLowerCase() === reqSigner.name.toLowerCase())) {
+        return true;
+      }
+      if (sig.employeeId && sig.employeeId === reqSigner.id) {
+        return true;
+      }
+      if (sig.signerName && reqSigner.name && sig.signerName.trim().toLowerCase() === reqSigner.name.trim().toLowerCase()) {
+        return true;
+      }
+      return false;
+    });
+
+    if (foundSig) {
+      signedWorkers.push({
+        id: reqSigner.id,
+        name: reqSigner.name,
+        role: reqSigner.role,
+        cpf: reqSigner.cpf,
+        type: reqSigner.type,
+        isSupervisor: reqSigner.isSupervisor,
+        signedAt: foundSig.signedAt,
+        signatureDataUrl: foundSig.signatureDataUrl,
+        photoDataUrl: foundSig.photoDataUrl,
+        deviceId: foundSig.deviceId,
+        ipAddress: foundSig.ipAddress
+      });
+    } else {
+      pendingWorkers.push(reqSigner);
+    }
+  }
+
+  const totalRequired = uniqueRequired.length;
+  const totalSigned = signedWorkers.length;
+  const percentage = totalRequired > 0 ? Math.round((totalSigned / totalRequired) * 100) : 100;
+
+  let status: 'pendente' | 'parcial' | 'homologado' = 'pendente';
+  if (totalSigned >= totalRequired && totalRequired > 0) {
+    status = 'homologado';
+  } else if (totalSigned > 0) {
+    status = 'parcial';
+  }
+
+  return {
+    totalRequired,
+    totalSigned,
+    percentage,
+    status,
+    isFullySigned: status === 'homologado',
+    pendingWorkers,
+    signedWorkers,
+    requiredWorkers: uniqueRequired
+  };
+}
+
 // List all documents with filters
 documentRoutes.get('/', authenticateToken, requirePermission('documents', 'view'), (req: Request, res: Response) => {
-  const { type, status, locationId } = req.query;
+  const { type, status, signatureStatus, locationId } = req.query;
 
   let docs = db.documents.find(type as string);
 
@@ -65,17 +258,25 @@ documentRoutes.get('/', authenticateToken, requirePermission('documents', 'view'
     docs = docs.filter(d => d.location_id === locationId);
   }
 
-  // Enriched with location name and employee name
+  // Enriched with location name, employee name and signatureStatus
   const locations = db.riskLocations.find();
   const employees = db.employees.find();
   const allDocs = db.documents.find();
 
-  const enriched = docs.map(d => ({
-    ...d,
-    location_name: locations.find(l => l.id === d.location_id)?.name || null,
-    employee_name: d.employee_id ? employees.find(e => e.id === d.employee_id)?.name : null,
-    linked_apr_code: d.apr_id ? allDocs.find(a => a.id === d.apr_id)?.code : null
-  }));
+  let enriched = docs.map(d => {
+    const sigStatus = calculateSignatureStatus(d);
+    return {
+      ...d,
+      location_name: locations.find(l => l.id === d.location_id)?.name || null,
+      employee_name: d.employee_id ? employees.find(e => e.id === d.employee_id)?.name : null,
+      linked_apr_code: d.apr_id ? allDocs.find(a => a.id === d.apr_id)?.code : null,
+      signatureStatus: sigStatus
+    };
+  });
+
+  if (signatureStatus) {
+    enriched = enriched.filter(d => d.signatureStatus.status === signatureStatus);
+  }
 
   return res.json(enriched);
 });
@@ -87,10 +288,33 @@ documentRoutes.get('/:id', authenticateToken, requirePermission('documents', 'vi
   if (!doc) return res.status(404).json({ error: 'Documento não encontrado.' });
 
   const location = doc.location_id ? db.riskLocations.findById(doc.location_id) : null;
+  const sigStatus = calculateSignatureStatus(doc);
 
   return res.json({
     ...doc,
-    location
+    location,
+    signatureStatus: sigStatus
+  });
+});
+
+// Public info for QR code signing (No auth required)
+documentRoutes.get('/:id/public-info', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const doc = db.documents.findById(id);
+  if (!doc) return res.status(404).json({ error: 'Documento não encontrado.' });
+
+  const location = doc.location_id ? db.riskLocations.findById(doc.location_id) : null;
+  const sigStatus = calculateSignatureStatus(doc);
+
+  return res.json({
+    id: doc.id,
+    code: doc.code,
+    title: doc.title,
+    type: doc.type,
+    location_name: location?.name || 'Usina Santa Isabel - Novo Horizonte',
+    created_at: doc.created_at,
+    created_by_name: doc.created_by_name,
+    signatureStatus: sigStatus
   });
 });
 
@@ -176,6 +400,22 @@ documentRoutes.post('/pt', authenticateToken, requirePermission('documents', 'cr
 
   if (!title || !workTypes || workTypes.length === 0) {
     return res.status(400).json({ error: 'Título da PT e tipos de trabalho autorizados são obrigatórios.' });
+  }
+
+  // TRAVA DE SEGURANÇA OPERACIONAL SST:
+  // Se a PT for vinculada a uma APR, a APR DEVE estar 100% homologada com todas as assinaturas!
+  if (aprId) {
+    const linkedApr = db.documents.findById(aprId);
+    if (linkedApr) {
+      const aprSigStatus = calculateSignatureStatus(linkedApr);
+      if (aprSigStatus.status !== 'homologado') {
+        const pendingNames = aprSigStatus.pendingWorkers.map(w => w.name).join(', ');
+        return res.status(400).json({
+          error: `Bloqueio de Segurança SST: A APR vinculada (${linkedApr.code}) ainda não está 100% homologada. É obrigatório que todos os executantes e o supervisor assinem a APR antes da liberação da PT.`,
+          details: [`Assinatura(s) pendente(s): ${pendingNames}`]
+        });
+      }
+    }
   }
 
   // Se for Espaço Confinado / PET, exige Vigia designado conforme NR-33
@@ -544,27 +784,30 @@ documentRoutes.post('/', authenticateToken, requirePermission('documents', 'crea
   return res.status(201).json(newDoc);
 });
 
-// Add digital signature to document
+// Add or update digital signature of specific collaborator
 documentRoutes.post('/:id/sign', authenticateToken, (req: Request, res: Response) => {
   const { id } = req.params;
-  const { signerName, signerRole, signatureDataUrl, signerType } = req.body;
+  const { employeeId, signerName, signerRole, signerCpf, signatureDataUrl, photoDataUrl, signerType } = req.body;
 
   if (!signerName || !signatureDataUrl) {
-    return res.status(400).json({ error: 'Nome do signatário e assinatura digital são obrigatórios.' });
+    return res.status(400).json({ error: 'Nome do signatário e rubrica digital são obrigatórios.' });
   }
 
   const doc = db.documents.findById(id);
   if (!doc) return res.status(404).json({ error: 'Documento não encontrado.' });
 
-  const clientIp = req.headers['x-forwarded-for'] as string || req.socket.remoteAddress || '127.0.0.1';
+  const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '127.0.0.1';
   const deviceId = (req.headers['x-device-id'] as string) || 'NAV-WEB';
 
   const newSignature = {
-    id: 'sig_' + Date.now(),
-    signerName,
-    signerRole: signerRole || 'Operador',
-    signerType: signerType || 'executante', // 'supervisor' | 'executante' | 'vigia'
+    id: 'sig_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+    employeeId: employeeId || undefined,
+    signerName: signerName.trim(),
+    signerRole: signerRole || 'Executante',
+    signerCpf: signerCpf || undefined,
+    signerType: signerType || 'executante',
     signatureDataUrl,
+    photoDataUrl: photoDataUrl || undefined,
     signedAt: new Date().toISOString(),
     signedByUserId: req.user?.id,
     deviceId,
@@ -575,14 +818,121 @@ documentRoutes.post('/:id/sign', authenticateToken, (req: Request, res: Response
   if (!Array.isArray(updatedData.signatures)) {
     updatedData.signatures = [];
   }
-  updatedData.signatures.push(newSignature);
 
-  const updated = db.documents.update(id, { data: updatedData });
-  logAudit(req, 'ASSINATURA_DIGITAL', 'DOCUMENTOS', `Assinatura digital coletada para documento ${doc.code} por ${signerName}`);
+  // If a signature for this employeeId or signerName already exists, replace it cleanly
+  const existingIdx = updatedData.signatures.findIndex((s: any) =>
+    (employeeId && s.employeeId === employeeId) ||
+    (s.signerName && s.signerName.toLowerCase() === signerName.toLowerCase() && s.signerType === newSignature.signerType)
+  );
+
+  if (existingIdx !== -1) {
+    updatedData.signatures[existingIdx] = newSignature;
+  } else {
+    updatedData.signatures.push(newSignature);
+  }
+
+  // Calculate new signature status
+  const tempDoc = { ...doc, data: updatedData };
+  const sigStatus = calculateSignatureStatus(tempDoc);
+  let newDocStatus = doc.status;
+
+  if (sigStatus.status === 'homologado') {
+    newDocStatus = 'homologado';
+    updatedData.isFullySigned = true;
+  }
+
+  const updated = db.documents.update(id, {
+    data: updatedData,
+    status: newDocStatus
+  });
+
+  logAudit(
+    req,
+    'ASSINATURA_DIGITAL_COLABORADOR',
+    'DOCUMENTOS',
+    `Assinatura de ${signerName} (${signerRole || 'Colaborador'}) registrada no documento ${doc.code}. Progresso: ${sigStatus.totalSigned}/${sigStatus.totalRequired} (${sigStatus.percentage}%)`
+  );
 
   return res.json({
-    message: 'Assinatura digital registrada com sucesso!',
-    document: updated
+    message: sigStatus.isFullySigned
+      ? 'Documento 100% assinado e homologado com sucesso!'
+      : `Assinatura de ${signerName} registrada com sucesso! (${sigStatus.totalSigned}/${sigStatus.totalRequired})`,
+    document: {
+      ...updated,
+      signatureStatus: sigStatus
+    },
+    signatureStatus: sigStatus
+  });
+});
+
+// Public sign endpoint for QR code on smartphone (No Bearer token required)
+documentRoutes.post('/:id/sign-public', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { employeeId, signerName, signerRole, signerCpf, signatureDataUrl, photoDataUrl, signerType } = req.body;
+
+  if (!signerName || !signatureDataUrl) {
+    return res.status(400).json({ error: 'Nome do signatário e rubrica digital são obrigatórios.' });
+  }
+
+  const doc = db.documents.findById(id);
+  if (!doc) return res.status(404).json({ error: 'Documento não encontrado.' });
+
+  const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '127.0.0.1';
+  const deviceId = (req.headers['x-device-id'] as string) || 'QR-SMARTPHONE';
+
+  const newSignature = {
+    id: 'sig_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+    employeeId: employeeId || undefined,
+    signerName: signerName.trim(),
+    signerRole: signerRole || 'Executante',
+    signerCpf: signerCpf || undefined,
+    signerType: signerType || 'executante',
+    signatureDataUrl,
+    photoDataUrl: photoDataUrl || undefined,
+    signedAt: new Date().toISOString(),
+    deviceId,
+    ipAddress: clientIp
+  };
+
+  const updatedData = { ...doc.data };
+  if (!Array.isArray(updatedData.signatures)) {
+    updatedData.signatures = [];
+  }
+
+  const existingIdx = updatedData.signatures.findIndex((s: any) =>
+    (employeeId && s.employeeId === employeeId) ||
+    (s.signerName && s.signerName.toLowerCase() === signerName.toLowerCase() && s.signerType === newSignature.signerType)
+  );
+
+  if (existingIdx !== -1) {
+    updatedData.signatures[existingIdx] = newSignature;
+  } else {
+    updatedData.signatures.push(newSignature);
+  }
+
+  const tempDoc = { ...doc, data: updatedData };
+  const sigStatus = calculateSignatureStatus(tempDoc);
+  let newDocStatus = doc.status;
+
+  if (sigStatus.status === 'homologado') {
+    newDocStatus = 'homologado';
+    updatedData.isFullySigned = true;
+  }
+
+  const updated = db.documents.update(id, {
+    data: updatedData,
+    status: newDocStatus
+  });
+
+  return res.json({
+    message: sigStatus.isFullySigned
+      ? 'Documento 100% assinado e homologado com sucesso via QR Code!'
+      : `Assinatura de ${signerName} registrada com sucesso via QR Code! (${sigStatus.totalSigned}/${sigStatus.totalRequired})`,
+    document: {
+      ...updated,
+      signatureStatus: sigStatus
+    },
+    signatureStatus: sigStatus
   });
 });
 

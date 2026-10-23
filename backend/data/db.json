@@ -210,32 +210,6 @@
       "created_at": "2026-10-22T01:13:06.803Z"
     },
     {
-      "id": "emp_02",
-      "name": "Rafael Barbosa Lima",
-      "cpf": "234.567.890-12",
-      "registration_number": "MAT-1055",
-      "role": "Mecânico de Manutenção",
-      "department": "Manutenção Mecânica",
-      "admission_date": "2022-08-10",
-      "phone": "(11) 97654-3210",
-      "email": "rafael.lima@empresa.com.br",
-      "status": "ativo",
-      "created_at": "2026-10-22T01:13:06.803Z"
-    },
-    {
-      "id": "emp_03",
-      "name": "Antônio José dos Santos",
-      "cpf": "345.678.901-23",
-      "registration_number": "MAT-1089",
-      "role": "Soldador / Caldeireiro",
-      "department": "Caldeiraria & Estruturas",
-      "admission_date": "2021-11-01",
-      "phone": "(11) 96543-2109",
-      "email": "antonio.santos@empresa.com.br",
-      "status": "ativo",
-      "created_at": "2026-10-22T01:13:06.803Z"
-    },
-    {
       "id": "emp_04",
       "name": "Lucas Oliveira Ramos",
       "cpf": "456.789.012-34",
@@ -271,36 +245,6 @@
       "created_at": "2026-10-22T01:13:06.803Z"
     },
     {
-      "id": "trn_03",
-      "employee_id": "emp_02",
-      "type": "NR-33 Espaço Confinado (Trabalhador Autorizado e Vigia)",
-      "institution": "Fundacentro",
-      "certificate_number": "CERT-33-3110",
-      "completion_date": "2024-11-05",
-      "expiry_date": "2026-11-05",
-      "created_at": "2026-10-22T01:13:06.803Z"
-    },
-    {
-      "id": "trn_04",
-      "employee_id": "emp_02",
-      "type": "NR-35 Trabalho em Altura",
-      "institution": "SENAI Segurança",
-      "certificate_number": "CERT-35-7729",
-      "completion_date": "2025-08-20",
-      "expiry_date": "2027-08-20",
-      "created_at": "2026-10-22T01:13:06.803Z"
-    },
-    {
-      "id": "trn_05",
-      "employee_id": "emp_03",
-      "type": "NR-35 Trabalho em Altura",
-      "institution": "SEST SENAT",
-      "certificate_number": "CERT-35-1022",
-      "completion_date": "2024-01-10",
-      "expiry_date": "2026-01-10",
-      "created_at": "2026-10-22T01:13:06.803Z"
-    },
-    {
       "id": "trn_06",
       "employee_id": "emp_04",
       "type": "NR-33 Espaço Confinado (Supervisor de Entrada)",
@@ -329,26 +273,6 @@
       "ca_number": "CA-14760",
       "delivery_date": "2026-01-15",
       "expiry_date": "2028-01-15",
-      "status": "entregue",
-      "created_at": "2026-10-22T01:13:06.803Z"
-    },
-    {
-      "id": "epi_03",
-      "employee_id": "emp_02",
-      "name": "Cinto de Segurança Paraquedista e Espaço Confinado",
-      "ca_number": "CA-42118",
-      "delivery_date": "2026-02-01",
-      "expiry_date": "2027-02-01",
-      "status": "entregue",
-      "created_at": "2026-10-22T01:13:06.803Z"
-    },
-    {
-      "id": "epi_04",
-      "employee_id": "emp_02",
-      "name": "Máscara Facial Inteira c/ Filtro Multigases",
-      "ca_number": "CA-20188",
-      "delivery_date": "2026-02-01",
-      "expiry_date": "2026-12-01",
       "status": "entregue",
       "created_at": "2026-10-22T01:13:06.803Z"
     }
@@ -422,6 +346,266 @@
     }
   ],
   "documents": [
+    {
+      "id": "doc_1792756503172_tupe",
+      "code": "APR-2026-0003",
+      "type": "APR_ALTURA",
+      "title": "APR Manuten��o na Caldeira 02 - Usina Santa Isabel",
+      "description": "",
+      "location_id": "risk_03",
+      "status": "homologado",
+      "data": {
+        "activityDetails": "Trabalho em altura com andaimes e linha de vida",
+        "authorizedWorkers": [
+          {
+            "cpf": "123.456.789-00",
+            "name": "Carlos Mendes",
+            "id": "emp_01",
+            "role": "Eletricista Industrial"
+          },
+          {
+            "cpf": "456.789.012-34",
+            "name": "Lucas Oliveira Ramos",
+            "id": "emp_04",
+            "role": "Mec�nico"
+          }
+        ],
+        "riskClassification": "ALTO RISCO",
+        "createdDate": "2026-10-23T11:55:03.172Z",
+        "creatorName": "Administrador SST",
+        "creatorRole": "Administrador",
+        "deviceId": "NAV-THR1F69I",
+        "deviceName": "Mozilla/5.0 (Windows NT; Windows NT 10.0; pt-BR) WindowsPowerShell/5.1.22621.6133",
+        "ipAddress": "::1",
+        "signatures": [
+          {
+            "id": "sig_1792756503304_4qqx",
+            "employeeId": "emp_01",
+            "signerName": "Carlos Mendes",
+            "signerRole": "Eletricista Industrial",
+            "signerType": "executante",
+            "signatureDataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+            "signedAt": "2026-10-23T11:55:03.304Z",
+            "deviceId": "QR-SMARTPHONE",
+            "ipAddress": "::1"
+          },
+          {
+            "id": "sig_1792756503344_k02o",
+            "employeeId": "emp_04",
+            "signerName": "Lucas Oliveira Ramos",
+            "signerRole": "Mec�nico",
+            "signerType": "executante",
+            "signatureDataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+            "signedAt": "2026-10-23T11:55:03.344Z",
+            "deviceId": "QR-SMARTPHONE",
+            "ipAddress": "::1"
+          },
+          {
+            "id": "sig_1792756503359_76nq",
+            "signerName": "Administrador SST",
+            "signerRole": "Supervisor / Respons�vel Emissor",
+            "signerType": "supervisor",
+            "signatureDataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+            "signedAt": "2026-10-23T11:55:03.359Z",
+            "signedByUserId": "user_admin_01",
+            "deviceId": "NAV-WEB",
+            "ipAddress": "::1"
+          }
+        ],
+        "isFullySigned": true
+      },
+      "device_id": "NAV-THR1F69I",
+      "device_name": "Mozilla/5.0 (Windows NT; Windows NT 10.0; pt-BR) WindowsPowerShell/5.1.22621.6133",
+      "ip_address": "::1",
+      "created_by_user_id": "user_admin_01",
+      "created_by_name": "Administrador SST",
+      "created_at": "2026-10-23T11:55:03.172Z",
+      "updated_at": "2026-10-23T11:55:03.360Z"
+    },
+    {
+      "id": "doc_1792756356209_2mbv",
+      "code": "APR-2026-0002",
+      "type": "APR_ALTURA",
+      "title": "APR Teste de Campo com Executantes e Trava",
+      "description": "",
+      "location_id": "risk_01",
+      "status": "ativa",
+      "data": {
+        "activityDetails": "Substitui��o de l�mpadas em altura",
+        "authorizedWorkers": [
+          "System.Collections.Hashtable"
+        ],
+        "riskClassification": "ALTO RISCO",
+        "createdDate": "2026-10-23T11:52:36.209Z",
+        "creatorName": "Administrador SST",
+        "creatorRole": "Administrador",
+        "deviceId": "NAV-4TP1DP4X",
+        "deviceName": "Mozilla/5.0 (Windows NT; Windows NT 10.0; pt-BR) WindowsPowerShell/5.1.22621.6133",
+        "ipAddress": "::1",
+        "signatures": [
+          {
+            "id": "sig_1792756373404_yujk",
+            "employeeId": "emp_01",
+            "signerName": "Carlos Mendes",
+            "signerRole": "Eletricista",
+            "signerCpf": "123.456.789-00",
+            "signerType": "executante",
+            "signatureDataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+            "signedAt": "2026-10-23T11:52:53.404Z",
+            "deviceId": "QR-SMARTPHONE",
+            "ipAddress": "::1"
+          }
+        ]
+      },
+      "device_id": "NAV-4TP1DP4X",
+      "device_name": "Mozilla/5.0 (Windows NT; Windows NT 10.0; pt-BR) WindowsPowerShell/5.1.22621.6133",
+      "ip_address": "::1",
+      "created_by_user_id": "user_admin_01",
+      "created_by_name": "Administrador SST",
+      "created_at": "2026-10-23T11:52:36.209Z",
+      "updated_at": "2026-10-23T11:52:53.404Z"
+    },
+    {
+      "id": "doc_1792756325441_ptyy",
+      "code": "PT-2026-0002",
+      "type": "PT",
+      "title": "PT Teste Vinculada a APR Pendente",
+      "description": "",
+      "status": "ativa",
+      "data": {
+        "isPet": false,
+        "workTypes": [
+          "altura"
+        ],
+        "validityStart": "2026-10-23T11:52:05.441Z",
+        "validityEnd": "2026-10-23T19:52:05.441Z",
+        "supervisorName": "Administrador SST",
+        "authorizedWorkers": [
+          {
+            "id": "emp_01",
+            "name": "Marcos Aurélio Silveira",
+            "cpf": "123.456.789-01",
+            "role": "Eletricista Industrial"
+          },
+          {
+            "id": "emp_02",
+            "name": "Colaborador",
+            "cpf": "",
+            "role": ""
+          }
+        ],
+        "safetyMeasures": [],
+        "gasMeasurements": [],
+        "emergencyPlan": "Equipe de resgate interno / Corpo de Bombeiros (193)",
+        "deviceId": "NAV-WEB",
+        "deviceName": "Terminal de Campo",
+        "ipAddress": "::1",
+        "createdDate": "2026-10-23T11:52:05.441Z",
+        "signatures": []
+      },
+      "device_id": "NAV-WEB",
+      "device_name": "Terminal de Campo",
+      "ip_address": "::1",
+      "created_by_user_id": "user_admin_01",
+      "created_by_name": "Administrador SST",
+      "created_at": "2026-10-23T11:52:05.441Z",
+      "updated_at": "2026-10-23T11:52:05.441Z"
+    },
+    {
+      "id": "doc_1792754707898_2ctn",
+      "code": "EPI-2026-0002",
+      "type": "EPI_FICHA",
+      "title": "Ficha de Entrega de EPI (NR-06) — Lucas Oliveira Ramos",
+      "description": "Termo de entrega e recibo de EPIs do colaborador Lucas Oliveira Ramos",
+      "employee_id": "emp_04",
+      "status": "homologado",
+      "data": {
+        "signatures": [
+          {
+            "id": "sig_1792756214338_h5m0",
+            "employeeId": "emp_04",
+            "signerName": "Lucas Oliveira Ramos",
+            "signerRole": "Operador de Utilidades",
+            "signerCpf": "456.789.012-34",
+            "signerType": "executante",
+            "signatureDataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+            "signedAt": "2026-10-23T11:50:14.338Z",
+            "signedByUserId": "user_admin_01",
+            "deviceId": "NAV-WEB",
+            "ipAddress": "::1"
+          },
+          {
+            "id": "sig_1792756230587_mrl3",
+            "signerName": "Administrador SST",
+            "signerRole": "Supervisor / Respons�vel Emissor",
+            "signerType": "supervisor",
+            "signatureDataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+            "signedAt": "2026-10-23T11:50:30.587Z",
+            "signedByUserId": "user_admin_01",
+            "deviceId": "NAV-WEB",
+            "ipAddress": "::1"
+          }
+        ],
+        "employee": {
+          "id": "emp_04",
+          "name": "Lucas Oliveira Ramos",
+          "cpf": "456.789.012-34",
+          "registration_number": "MAT-1102",
+          "role": "Operador de Utilidades",
+          "department": "Operações Industriais"
+        },
+        "deliveredItems": [
+          {
+            "name": "Capacete de Segurança com Jugular",
+            "caNumber": "CA-14760",
+            "deliveryDate": "2026-10-23",
+            "quantity": 1,
+            "condition": "Novo"
+          },
+          {
+            "name": "Óculos de Proteção contra Impactos",
+            "caNumber": "CA-20188",
+            "deliveryDate": "2026-10-23",
+            "quantity": 1,
+            "condition": "Novo"
+          },
+          {
+            "name": "Botina de Segurança com Biqueira de Composite",
+            "caNumber": "CA-42118",
+            "deliveryDate": "2026-10-23",
+            "quantity": 1,
+            "condition": "Novo"
+          },
+          {
+            "name": "Protetor Auditivo Tipo Plug de Silicone",
+            "caNumber": "CA-36399",
+            "deliveryDate": "2026-10-23",
+            "quantity": 2,
+            "condition": "Novo"
+          },
+          {
+            "name": "Cinto de segurança NR-35",
+            "caNumber": "CA-45789",
+            "deliveryDate": "2026-10-23",
+            "quantity": 1,
+            "condition": "Novo"
+          }
+        ],
+        "termOfResponsibility": "Recebi da empresa os Equipamentos de Proteção Individual (EPI) constantes nesta ficha, em perfeitas condições de uso e funcionamento, com os respectivos Certificados de Aprovação (CA) válidos. Comprometo-me a usá-los exclusivamente em serviço, zelar por sua guarda e conservação e comunicar imediatamente ao setor de SST qualquer dano ou extravio, nos termos da NR-06 da Portaria 3.214/78 do MTE.",
+        "deviceId": "MOB-E67A57-UNRZ",
+        "deviceName": "Chrome no Android Smartphone (MOB-E67A57-UNRZ)",
+        "ipAddress": "2804:18:181b:9a48:20a0:89ff:fef9:133e",
+        "createdDate": "2026-10-23T11:25:07.898Z",
+        "isFullySigned": true
+      },
+      "device_id": "MOB-E67A57-UNRZ",
+      "device_name": "Chrome no Android Smartphone (MOB-E67A57-UNRZ)",
+      "ip_address": "2804:18:181b:9a48:20a0:89ff:fef9:133e",
+      "created_by_user_id": "user_admin_01",
+      "created_by_name": "Administrador SST",
+      "created_at": "2026-10-23T11:25:07.898Z",
+      "updated_at": "2026-10-23T11:50:30.587Z"
+    },
     {
       "id": "doc_1792708931907_scbn",
       "code": "CHK-2026-0001",
@@ -617,7 +801,19 @@
         "deviceName": "Terminal de Campo",
         "ipAddress": "::1",
         "createdDate": "2026-10-22T22:42:11.862Z",
-        "signatures": []
+        "signatures": [
+          {
+            "id": "sig_1792751764106",
+            "signerName": "Administrador SST",
+            "signerRole": "Administrador",
+            "signerType": "supervisor",
+            "signatureDataUrl": "data:image/png;base64,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",
+            "signedAt": "2026-10-23T10:36:04.106Z",
+            "signedByUserId": "user_admin_01",
+            "deviceId": "MOB-E67A57-UNRZ",
+            "ipAddress": "2804:18:181b:9a48:20a0:89ff:fef9:133e"
+          }
+        ]
       },
       "device_id": "NAV-WEB",
       "device_name": "Terminal de Campo",
@@ -625,7 +821,7 @@
       "created_by_user_id": "user_admin_01",
       "created_by_name": "Administrador SST",
       "created_at": "2026-10-22T22:42:11.862Z",
-      "updated_at": "2026-10-22T22:42:11.862Z"
+      "updated_at": "2026-10-23T10:36:04.106Z"
     },
     {
       "id": "doc_apr_01",
@@ -731,6 +927,292 @@
     }
   ],
   "audit_logs": [
+    {
+      "id": "log_1792756638668_hn2qu",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "LOGIN",
+      "module": "AUTENTICACAO",
+      "details": "Login realizado com sucesso pelo dispositivo: Web",
+      "device_id": "Desconhecido",
+      "ip_address": "::1",
+      "created_at": "2026-10-23T11:57:18.668Z"
+    },
+    {
+      "id": "log_1792756626516_afph5",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "LOGIN",
+      "module": "AUTENTICACAO",
+      "details": "Login realizado com sucesso pelo dispositivo: Web",
+      "device_id": "Desconhecido",
+      "ip_address": "::1",
+      "created_at": "2026-10-23T11:57:06.516Z"
+    },
+    {
+      "id": "log_1792756503365_m5ei7",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "ASSINATURA_DIGITAL_COLABORADOR",
+      "module": "DOCUMENTOS",
+      "details": "Assinatura de Administrador SST (Supervisor / Respons�vel Emissor) registrada no documento APR-2026-0003. Progresso: 3/3 (100%)",
+      "device_id": "Desconhecido",
+      "ip_address": "::1",
+      "created_at": "2026-10-23T11:55:03.365Z"
+    },
+    {
+      "id": "log_1792756503176_u7uea",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "EMISSAO_APR",
+      "module": "DOCUMENTOS",
+      "details": "APR APR-2026-0003 emitida por Administrador SST no dispositivo NAV-THR1F69I",
+      "device_id": "Desconhecido",
+      "ip_address": "::1",
+      "created_at": "2026-10-23T11:55:03.176Z"
+    },
+    {
+      "id": "log_1792756503011_ieczb",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "LOGIN",
+      "module": "AUTENTICACAO",
+      "details": "Login realizado com sucesso pelo dispositivo: Web",
+      "device_id": "Desconhecido",
+      "ip_address": "::1",
+      "created_at": "2026-10-23T11:55:03.011Z"
+    },
+    {
+      "id": "log_1792756457864_4e8kt",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "LOGIN",
+      "module": "AUTENTICACAO",
+      "details": "Login realizado com sucesso pelo dispositivo: Web",
+      "device_id": "Desconhecido",
+      "ip_address": "::1",
+      "created_at": "2026-10-23T11:54:17.864Z"
+    },
+    {
+      "id": "log_1792756434313_a96a8",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "LOGIN",
+      "module": "AUTENTICACAO",
+      "details": "Login realizado com sucesso pelo dispositivo: Web",
+      "device_id": "Desconhecido",
+      "ip_address": "::1",
+      "created_at": "2026-10-23T11:53:54.313Z"
+    },
+    {
+      "id": "log_1792756356214_ovo94",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "EMISSAO_APR",
+      "module": "DOCUMENTOS",
+      "details": "APR APR-2026-0002 emitida por Administrador SST no dispositivo NAV-4TP1DP4X",
+      "device_id": "Desconhecido",
+      "ip_address": "::1",
+      "created_at": "2026-10-23T11:52:36.214Z"
+    },
+    {
+      "id": "log_1792756356045_lwo4e",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "LOGIN",
+      "module": "AUTENTICACAO",
+      "details": "Login realizado com sucesso pelo dispositivo: Web",
+      "device_id": "Desconhecido",
+      "ip_address": "::1",
+      "created_at": "2026-10-23T11:52:36.045Z"
+    },
+    {
+      "id": "log_1792756325445_tyvzj",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "EMISSAO_PT",
+      "module": "DOCUMENTOS",
+      "details": "PT-2026-0002 (PT) liberada para 2 executante(s)",
+      "device_id": "Desconhecido",
+      "ip_address": "::1",
+      "created_at": "2026-10-23T11:52:05.445Z"
+    },
+    {
+      "id": "log_1792756324686_1t3y4",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "LOGIN",
+      "module": "AUTENTICACAO",
+      "details": "Login realizado com sucesso pelo dispositivo: Web",
+      "device_id": "Desconhecido",
+      "ip_address": "::1",
+      "created_at": "2026-10-23T11:52:04.686Z"
+    },
+    {
+      "id": "log_1792756272750_8qgzi",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "LOGIN",
+      "module": "AUTENTICACAO",
+      "details": "Login realizado com sucesso pelo dispositivo: Web",
+      "device_id": "Desconhecido",
+      "ip_address": "::1",
+      "created_at": "2026-10-23T11:51:12.750Z"
+    },
+    {
+      "id": "log_1792756260731_j5f11",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "LOGIN",
+      "module": "AUTENTICACAO",
+      "details": "Login realizado com sucesso pelo dispositivo: Web",
+      "device_id": "Desconhecido",
+      "ip_address": "::1",
+      "created_at": "2026-10-23T11:51:00.731Z"
+    },
+    {
+      "id": "log_1792756247561_lhgl4",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "LOGIN",
+      "module": "AUTENTICACAO",
+      "details": "Login realizado com sucesso pelo dispositivo: Web",
+      "device_id": "Desconhecido",
+      "ip_address": "::1",
+      "created_at": "2026-10-23T11:50:47.561Z"
+    },
+    {
+      "id": "log_1792756230591_kb04k",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "ASSINATURA_DIGITAL_COLABORADOR",
+      "module": "DOCUMENTOS",
+      "details": "Assinatura de Administrador SST (Supervisor / Respons�vel Emissor) registrada no documento EPI-2026-0002. Progresso: 2/2 (100%)",
+      "device_id": "Desconhecido",
+      "ip_address": "::1",
+      "created_at": "2026-10-23T11:50:30.591Z"
+    },
+    {
+      "id": "log_1792756230382_3nw78",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "LOGIN",
+      "module": "AUTENTICACAO",
+      "details": "Login realizado com sucesso pelo dispositivo: Web",
+      "device_id": "Desconhecido",
+      "ip_address": "::1",
+      "created_at": "2026-10-23T11:50:30.382Z"
+    },
+    {
+      "id": "log_1792756214342_df0ym",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "ASSINATURA_DIGITAL_COLABORADOR",
+      "module": "DOCUMENTOS",
+      "details": "Assinatura de Lucas Oliveira Ramos (Operador de Utilidades) registrada no documento EPI-2026-0002. Progresso: 1/2 (50%)",
+      "device_id": "Desconhecido",
+      "ip_address": "::1",
+      "created_at": "2026-10-23T11:50:14.342Z"
+    },
+    {
+      "id": "log_1792756214130_yqiyn",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "LOGIN",
+      "module": "AUTENTICACAO",
+      "details": "Login realizado com sucesso pelo dispositivo: Web",
+      "device_id": "Desconhecido",
+      "ip_address": "::1",
+      "created_at": "2026-10-23T11:50:14.130Z"
+    },
+    {
+      "id": "log_1792756191270_vx1n3",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "LOGIN",
+      "module": "AUTENTICACAO",
+      "details": "Login realizado com sucesso pelo dispositivo: Web",
+      "device_id": "Desconhecido",
+      "ip_address": "::1",
+      "created_at": "2026-10-23T11:49:51.270Z"
+    },
+    {
+      "id": "log_1792754707902_w2gyc",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "EMISSAO_FICHA_EPI",
+      "module": "DOCUMENTOS",
+      "details": "Ficha de EPI EPI-2026-0002 emitida para Lucas Oliveira Ramos com 5 item(ns)",
+      "device_id": "MOB-E67A57-UNRZ",
+      "ip_address": "2804:18:181b:9a48:20a0:89ff:fef9:133e",
+      "created_at": "2026-10-23T11:25:07.902Z"
+    },
+    {
+      "id": "log_1792754618299_xhl9s",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "LOGIN",
+      "module": "AUTENTICACAO",
+      "details": "Login realizado com sucesso pelo dispositivo: Chrome no Android Smartphone (MOB-E67A57-UNRZ)",
+      "device_id": "MOB-E67A57-UNRZ",
+      "ip_address": "2804:18:181b:9a48:20a0:89ff:fef9:133e",
+      "created_at": "2026-10-23T11:23:38.299Z"
+    },
+    {
+      "id": "log_1792751864878_j755p",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "EXCLUIR_FUNCIONARIO",
+      "module": "FUNCIONARIOS",
+      "details": "Funcionário excluído: Rafael Barbosa Lima",
+      "device_id": "MOB-E67A57-UNRZ",
+      "ip_address": "2804:18:181b:9a48:20a0:89ff:fef9:133e",
+      "created_at": "2026-10-23T10:37:44.878Z"
+    },
+    {
+      "id": "log_1792751859286_n8rvb",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "EXCLUIR_FUNCIONARIO",
+      "module": "FUNCIONARIOS",
+      "details": "Funcionário excluído: Antônio José dos Santos",
+      "device_id": "MOB-E67A57-UNRZ",
+      "ip_address": "2804:18:181b:9a48:20a0:89ff:fef9:133e",
+      "created_at": "2026-10-23T10:37:39.286Z"
+    },
+    {
+      "id": "log_1792751764109_0pme9",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "ASSINATURA_DIGITAL",
+      "module": "DOCUMENTOS",
+      "details": "Assinatura digital coletada para documento PT-2026-0001 por Administrador SST",
+      "device_id": "MOB-E67A57-UNRZ",
+      "ip_address": "2804:18:181b:9a48:20a0:89ff:fef9:133e",
+      "created_at": "2026-10-23T10:36:04.110Z"
+    },
+    {
+      "id": "log_1792751744816_b16p6",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "LOGIN",
+      "module": "AUTENTICACAO",
+      "details": "Login realizado com sucesso pelo dispositivo: Chrome no Android Smartphone (MOB-E67A57-UNRZ)",
+      "device_id": "MOB-E67A57-UNRZ",
+      "ip_address": "2804:18:181b:9a48:20a0:89ff:fef9:133e",
+      "created_at": "2026-10-23T10:35:44.816Z"
+    },
+    {
+      "id": "log_1792750130194_d9qy4",
+      "user_id": "user_admin_01",
+      "user_name": "Administrador SST",
+      "action": "LOGIN",
+      "module": "AUTENTICACAO",
+      "details": "Login realizado com sucesso pelo dispositivo: Chrome no Android Smartphone (MOB-E67A57-UNRZ)",
+      "device_id": "MOB-E67A57-UNRZ",
+      "ip_address": "2804:18:181b:9a48:20a0:89ff:fef9:133e",
+      "created_at": "2026-10-23T10:08:50.194Z"
+    },
     {
       "id": "log_1792749805298_40jbv",
       "user_id": "user_admin_01",

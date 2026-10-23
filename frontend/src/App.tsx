@@ -13,6 +13,7 @@ import { UsersAndRolesPage } from './pages/UsersAndRolesPage';
 import { AuditLogsPage } from './pages/AuditLogsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { BrigadePage } from './pages/BrigadePage';
+import { PublicSignaturePage } from './pages/PublicSignaturePage';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoading } = useAuth();
@@ -38,6 +39,7 @@ export function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/assinar-documento" element={<PublicSignaturePage />} />
 
           <Route
             path="/"

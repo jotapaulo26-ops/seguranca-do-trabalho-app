@@ -21,20 +21,28 @@ export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
 
   const [stats, setStats] = useState<any>(null);
+  const [pendingDocs, setPendingDocs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadStats() {
+    async function loadData() {
       try {
-        const data = await api.get('/dashboard/stats');
-        setStats(data);
+        const [statsData, docsData] = await Promise.all([
+          api.get('/dashboard/stats'),
+          api.get<any[]>('/documents')
+        ]);
+        setStats(statsData);
+        const pendings = (docsData || []).filter(
+          d => !d.signatureStatus || d.signatureStatus?.status !== 'homologado'
+        );
+        setPendingDocs(pendings);
       } catch (err) {
         console.error('Erro ao carregar métricas:', err);
       } finally {
         setLoading(false);
       }
     }
-    loadStats();
+    loadData();
   }, []);
 
   if (loading) {
@@ -171,6 +179,55 @@ export const Dashboard: React.FC = () => {
           </p>
         </div>
       </div>
+
+      {/* ALERTA DE HOMOLOGAÇÃO E ASSINATURAS PENDENTES DE COLABORADORES */}
+      {pendingDocs.length > 0 && (
+        <div className="bg-amber-500/10 border-2 border-amber-500/30 rounded-3xl p-5 shadow-sm space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center font-black shrink-0 shadow-md shadow-amber-500/20">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-slate-900 text-sm">
+                  Atenção SST: {pendingDocs.length} Documento(s) com Assinaturas Pendentes de Colaboradores
+                </h3>
+                <p className="text-xs text-slate-600">
+                  A liberação operacional de Permissões de Trabalho (PT) fica travada até que todos os executantes assinem.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => navigate('/documentos')}
+              className="py-2 px-4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl shadow-sm self-start sm:self-auto shrink-0 transition-transform hover:scale-[1.02]"
+            >
+              Coletar Assinaturas no Campo →
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1">
+            {pendingDocs.slice(0, 3).map((d: any) => (
+              <div
+                key={d.id}
+                onClick={() => navigate(`/documentos?docId=${d.id}`)}
+                className="bg-white p-3 rounded-2xl border border-amber-200/80 hover:border-amber-400 cursor-pointer shadow-sm transition-all flex items-center justify-between"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-bold text-slate-900">{d.code}</span>
+                    <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded">
+                      {d.signatureStatus?.totalSigned || 0}/{d.signatureStatus?.totalRequired || 1}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-700 font-medium truncate mt-0.5">{d.title}</p>
+                </div>
+                <span className="text-[11px] font-black text-amber-600 shrink-0 ml-2">Assinar →</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* TWO COLUMN GRID: RISK BREAKDOWN & RECENT APRS */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

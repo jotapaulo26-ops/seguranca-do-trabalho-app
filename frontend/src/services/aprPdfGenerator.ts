@@ -45,14 +45,26 @@ export async function generateAprPdf(doc: DocumentRecord, companySettings?: any)
 
   // Document Code Box (top right)
   pdf.setFillColor(30, 41, 59);
-  pdf.roundedRect(pageWidth - margin - 50, 6, 50, 18, 2, 2, 'F');
+  pdf.roundedRect(pageWidth - margin - 58, 5, 58, 20, 2, 2, 'F');
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(10);
   pdf.setTextColor(245, 158, 11);
-  pdf.text(doc.code || 'APR-0000', pageWidth - margin - 47, 13);
-  pdf.setFontSize(8);
-  pdf.setTextColor(255, 255, 255);
-  pdf.text(`Status: ${(doc.status || 'ATIVA').toUpperCase()}`, pageWidth - margin - 47, 19);
+  pdf.text(doc.code || 'APR-0000', pageWidth - margin - 55, 11);
+
+  const sigStatus = doc.signatureStatus;
+  const isHomologated = sigStatus?.status === 'homologado' || doc.status === 'homologado';
+  pdf.setFontSize(7);
+  if (isHomologated) {
+    pdf.setTextColor(74, 222, 128); // Green 400
+    pdf.text(`100% HOMOLOGADO (${sigStatus?.totalSigned || 1}/${sigStatus?.totalRequired || 1})`, pageWidth - margin - 55, 16);
+    pdf.setFontSize(5.5);
+    pdf.text('LIBERADO P/ EXECUÇÃO', pageWidth - margin - 55, 20);
+  } else {
+    pdf.setTextColor(248, 113, 113); // Red 400
+    pdf.text(`ASSINATURAS PENDENTES (${sigStatus?.totalSigned || 0}/${sigStatus?.totalRequired || 1})`, pageWidth - margin - 55, 16);
+    pdf.setFontSize(5.5);
+    pdf.text('PROIBIDO INICIAR ATIVIDADE', pageWidth - margin - 55, 20);
+  }
 
   let currentY = 38;
 
@@ -253,7 +265,7 @@ export async function generateAprPdf(doc: DocumentRecord, companySettings?: any)
   currentY += 7;
 
   // --- ASSINATURAS DIGITAIS REGISTRADAS ---
-  if (currentY > pageHeight - 55) {
+  if (currentY > pageHeight - 65) {
     pdf.addPage();
     currentY = 20;
   }
@@ -261,67 +273,84 @@ export async function generateAprPdf(doc: DocumentRecord, companySettings?: any)
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(10);
   pdf.setTextColor(15, 23, 42);
-  pdf.text('5. VALIDAÇÃO E ASSINATURAS DIGITAIS', margin, currentY);
+  pdf.text('5. VALIDAÇÃO E ASSINATURAS DIGITAIS DA EQUIPE', margin, currentY);
   currentY += 4;
 
   const signatures: any[] = data.signatures || [];
-  const supervisorSig = signatures.find(s => s.signerType === 'supervisor');
-  const workerSigs = signatures.filter(s => s.signerType !== 'supervisor');
+  const requiredSigners = doc.signatureStatus?.requiredWorkers || [
+    { id: 'supervisor', name: doc.created_by_name || 'Supervisor SST', role: 'Supervisor / Responsável Emissor', isSupervisor: true },
+    ...(team.length > 0 ? team.map((t: any) => ({ id: t.id, name: t.name, role: t.role || 'Executante', isSupervisor: false })) : [{ id: 'worker', name: 'Executante Autorizado', role: 'Executante', isSupervisor: false }])
+  ];
 
-  // Supervisor Signature Box
-  pdf.setFillColor(248, 250, 252);
-  pdf.roundedRect(margin, currentY, 85, 34, 2, 2, 'FD');
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(8);
-  pdf.setTextColor(15, 23, 42);
-  pdf.text('RESPONSÁVEL TÉCNICO SST', margin + 3, currentY + 5);
+  const boxWidth = 85;
+  const boxHeight = 34;
 
-  if (supervisorSig?.signatureDataUrl) {
-    try {
-      pdf.addImage(supervisorSig.signatureDataUrl, 'PNG', margin + 5, currentY + 7, 50, 18);
-    } catch (e) {
-      pdf.text('[Assinatura Digital Registrada]', margin + 5, currentY + 16);
+  for (let i = 0; i < requiredSigners.length; i += 2) {
+    if (currentY > pageHeight - 45) {
+      pdf.addPage();
+      currentY = 20;
     }
-  } else {
-    pdf.setFont('helvetica', 'italic');
-    pdf.setTextColor(100, 116, 139);
-    pdf.text('(Assinatura Eletrônica Aprovada)', margin + 5, currentY + 16);
+
+    const rowSigners = requiredSigners.slice(i, i + 2);
+
+    rowSigners.forEach((signer: any, colIdx: number) => {
+      const x = margin + colIdx * (boxWidth + 5);
+      const matchingSig = signatures.find((s: any) =>
+        (signer.isSupervisor && s.signerType === 'supervisor') ||
+        (s.employeeId && s.employeeId === signer.id) ||
+        (s.signerName && s.signerName.toLowerCase() === signer.name.toLowerCase())
+      );
+
+      pdf.setFillColor(248, 250, 252);
+      pdf.setDrawColor(226, 232, 240);
+      pdf.roundedRect(x, currentY, boxWidth, boxHeight, 2, 2, 'FD');
+
+      // Title header
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(7.5);
+      pdf.setTextColor(15, 23, 42);
+      const roleTitle = signer.isSupervisor ? 'RESPONSÁVEL TÉCNICO SST' : `EXECUTANTE: ${signer.role?.toUpperCase() || 'EQUIPE'}`;
+      pdf.text(roleTitle.substring(0, 40), x + 3, currentY + 4.5);
+
+      if (matchingSig?.signatureDataUrl) {
+        try {
+          pdf.addImage(matchingSig.signatureDataUrl, 'PNG', x + 5, currentY + 6, 45, 16);
+        } catch (e) {
+          pdf.text('[Rubrica Registrada]', x + 5, currentY + 15);
+        }
+
+        // If photo selfie exists, stamp it next to the signature
+        if (matchingSig.photoDataUrl) {
+          try {
+            pdf.addImage(matchingSig.photoDataUrl, 'JPEG', x + 60, currentY + 6, 16, 16);
+            pdf.setFontSize(5);
+            pdf.setTextColor(100, 116, 139);
+            pdf.text('PRESENÇA', x + 61, currentY + 24);
+          } catch (e) {}
+        }
+      } else {
+        pdf.setFont('helvetica', 'italic');
+        pdf.setFontSize(7.5);
+        pdf.setTextColor(220, 38, 38);
+        pdf.text('[PENDENTE DE ASSINATURA]', x + 5, currentY + 15);
+      }
+
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(7);
+      pdf.setTextColor(15, 23, 42);
+      pdf.text(`Nome: ${signer.name}`, x + 3, currentY + 26);
+
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(6);
+      pdf.setTextColor(100, 116, 139);
+      const signedInfo = matchingSig
+        ? `Data: ${new Date(matchingSig.signedAt).toLocaleDateString('pt-BR')} ${new Date(matchingSig.signedAt).toLocaleTimeString('pt-BR')} • Dispositivo: ${matchingSig.deviceId || 'REGISTRADO'}`
+        : 'Aguardando validação e assinatura do colaborador';
+      pdf.text(signedInfo.substring(0, 65), x + 3, currentY + 30);
+    });
+
+    currentY += boxHeight + 4;
   }
-
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(7);
-  pdf.setTextColor(30, 41, 59);
-  pdf.text(`Nome: ${supervisorSig?.signerName || doc.created_by_name}`, margin + 3, currentY + 28);
-  pdf.text(`Dispositivo: ${supervisorSig?.deviceId || doc.device_id || 'ID-REGISTRADO'}`, margin + 3, currentY + 31);
-
-  // Executing Worker Signature Box
-  pdf.setFillColor(248, 250, 252);
-  pdf.roundedRect(margin + 90, currentY, 85, 34, 2, 2, 'FD');
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(8);
-  pdf.setTextColor(15, 23, 42);
-  pdf.text('EXECUTANTE(S) / EQUIPE', margin + 93, currentY + 5);
-
-  const primaryWorkerSig = workerSigs[0];
-  if (primaryWorkerSig?.signatureDataUrl) {
-    try {
-      pdf.addImage(primaryWorkerSig.signatureDataUrl, 'PNG', margin + 95, currentY + 7, 50, 18);
-    } catch (e) {
-      pdf.text('[Assinatura Digital Registrada]', margin + 95, currentY + 16);
-    }
-  } else {
-    pdf.setFont('helvetica', 'italic');
-    pdf.setTextColor(100, 116, 139);
-    pdf.text('(Ciente e apto para a execução segura)', margin + 95, currentY + 16);
-  }
-
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(7);
-  pdf.setTextColor(30, 41, 59);
-  pdf.text(`Nome: ${primaryWorkerSig?.signerName || team[0]?.name || 'Equipe' }`, margin + 93, currentY + 28);
-  pdf.text(`Dispositivo: ${primaryWorkerSig?.deviceId || doc.device_id || 'ID-REGISTRADO'}`, margin + 93, currentY + 31);
-
-  currentY += 38;
 
   // --- FOOTER & QR CODE OF AUTHENTICITY ---
   try {
