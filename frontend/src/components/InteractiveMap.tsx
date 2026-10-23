@@ -120,6 +120,7 @@ interface InteractiveMapProps {
   onAddPointClick?: (coords: { lat: number; lng: number }) => void;
   onGenerateApr?: (location: RiskLocation) => void;
   onShowQrCode?: (location: RiskLocation) => void;
+  previewCircle?: { lat: number; lng: number; radius: number; color?: string } | null;
   height?: string;
   initialCenter?: [number, number];
   zoom?: number;
@@ -131,6 +132,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   onAddPointClick,
   onGenerateApr,
   onShowQrCode,
+  previewCircle,
   height = '580px',
   // Default centered in Usina Santa Isabel (Novo Horizonte - SP)
   initialCenter = [-21.5083, -49.2081],
@@ -378,6 +380,49 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
             </Popup>
           </Marker>
         ))}
+
+        {/* ----------------- GEOFENCE VIRTUAL FENCE CIRCLES (ZONAS DE RISCO) ----------------- */}
+        {filteredLocations.map((loc) => {
+          const radius = loc.geofence_radius || 25;
+          const color =
+            loc.risk_type === 'espaco_confinado'
+              ? '#8b5cf6'
+              : loc.risk_type === 'altura'
+              ? '#f59e0b'
+              : loc.risk_type === 'ambos'
+              ? '#ef4444'
+              : '#06b6d4';
+
+          return (
+            <Circle
+              key={`geofence-${loc.id}`}
+              center={[loc.lat, loc.lng]}
+              radius={radius}
+              pathOptions={{
+                color,
+                fillColor: color,
+                fillOpacity: 0.12,
+                weight: 1.5,
+                dashArray: '6, 6'
+              }}
+            />
+          );
+        })}
+
+        {/* Live Interactive Preview Circle while creating/editing with slider */}
+        {previewCircle && (
+          <Circle
+            center={[previewCircle.lat, previewCircle.lng]}
+            radius={previewCircle.radius}
+            pathOptions={{
+              color: previewCircle.color || '#ef4444',
+              fillColor: previewCircle.color || '#ef4444',
+              fillOpacity: 0.25,
+              weight: 2,
+              dashArray: '4, 4'
+            }}
+          />
+        )}
 
         {/* ----------------- CURRENT USER GPS MARKER (VOCÊ) ----------------- */}
         {showTeamLayer && myLocation && (

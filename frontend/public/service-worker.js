@@ -95,3 +95,27 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
+// 4. Background Push & Geofence Notification Click Handler
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || '/mapa';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // If a window is already open, focus and navigate it
+      for (const client of clientList) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          if ('navigate' in client) {
+            client.navigate(targetUrl);
+          }
+          return client.focus();
+        }
+      }
+      // If not open, open a new window
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(targetUrl);
+      }
+    })
+  );
+});

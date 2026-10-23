@@ -71,6 +71,7 @@ export interface RiskLocation {
   lng: number;
   risk_type: 'altura' | 'espaco_confinado' | 'ambos' | 'outro';
   description: string;
+  geofence_radius?: number;
   required_epis: string[];
   authorized_employee_ids: string[];
   photo_url?: string;
@@ -374,7 +375,9 @@ export interface NearbyRiskAlert {
   name: string;
   risk_type: string;
   distance: number;
+  radius?: number;
   isInsideZone: boolean;
+  isUnauthorizedIntrusion?: boolean;
   required_epis: string[];
 }
 

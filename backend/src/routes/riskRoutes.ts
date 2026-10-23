@@ -71,7 +71,7 @@ riskRoutes.get('/:id/qrcode', authenticateToken, async (req: Request, res: Respo
 
 // Create new risk location
 riskRoutes.post('/', authenticateToken, requirePermission('map', 'create'), async (req: Request, res: Response) => {
-  const { name, lat, lng, risk_type, description, required_epis, authorized_employee_ids, photo_url } = req.body;
+  const { name, lat, lng, risk_type, description, geofence_radius, required_epis, authorized_employee_ids, photo_url } = req.body;
 
   if (!name || lat === undefined || lng === undefined || !risk_type || !description) {
     return res.status(400).json({ error: 'Nome, coordenadas (latitude e longitude), tipo de risco e descrição são obrigatórios.' });
@@ -87,6 +87,7 @@ riskRoutes.post('/', authenticateToken, requirePermission('map', 'create'), asyn
     lng: Number(lng),
     risk_type,
     description: description.trim(),
+    geofence_radius: geofence_radius ? Math.max(5, Math.min(500, Number(geofence_radius))) : 25,
     required_epis: Array.isArray(required_epis) ? required_epis : [],
     authorized_employee_ids: Array.isArray(authorized_employee_ids) ? authorized_employee_ids : [],
     photo_url: photo_url || undefined,
@@ -96,7 +97,7 @@ riskRoutes.post('/', authenticateToken, requirePermission('map', 'create'), asyn
   };
 
   db.riskLocations.create(newRisk);
-  logAudit(req, 'CRIAR_PONTO_RISCO', 'MAPA', `Ponto de risco adicionado no mapa: ${newRisk.name} (${newRisk.risk_type})`);
+  logAudit(req, 'CRIAR_PONTO_RISCO', 'MAPA', `Ponto de risco adicionado no mapa: ${newRisk.name} (${newRisk.risk_type}) - Cerca de ${newRisk.geofence_radius}m`);
 
   return res.status(201).json(newRisk);
 });
@@ -107,7 +108,7 @@ riskRoutes.put('/:id', authenticateToken, requirePermission('map', 'edit'), (req
   const risk = db.riskLocations.findById(id);
   if (!risk) return res.status(404).json({ error: 'Ponto de risco não encontrado.' });
 
-  const { name, lat, lng, risk_type, description, required_epis, authorized_employee_ids, photo_url } = req.body;
+  const { name, lat, lng, risk_type, description, geofence_radius, required_epis, authorized_employee_ids, photo_url } = req.body;
 
   const updates: Partial<RiskLocation> = {};
   if (name) updates.name = name.trim();
@@ -115,6 +116,7 @@ riskRoutes.put('/:id', authenticateToken, requirePermission('map', 'edit'), (req
   if (lng !== undefined) updates.lng = Number(lng);
   if (risk_type) updates.risk_type = risk_type;
   if (description) updates.description = description.trim();
+  if (geofence_radius !== undefined) updates.geofence_radius = Math.max(5, Math.min(500, Number(geofence_radius)));
   if (required_epis !== undefined) updates.required_epis = required_epis;
   if (authorized_employee_ids !== undefined) updates.authorized_employee_ids = authorized_employee_ids;
   if (photo_url !== undefined) updates.photo_url = photo_url;

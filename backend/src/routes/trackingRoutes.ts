@@ -101,21 +101,55 @@ trackingRoutes.post('/heartbeat', authenticateToken, (req: Request, res: Respons
 
   activeUsersMap.set(req.user.id, locationEntry);
 
-  // Check proximity to all registered risk locations in DB (< 25 meters = warning)
+  // Check proximity to all registered risk locations in DB using custom geofence_radius and PT authorization check
   const risks = db.riskLocations.find();
+  const allDocs = db.documents.find();
+
   const nearbyRisks = risks
     .map(r => {
+      const radius = r.geofence_radius || 25;
       const distance = calculateDistanceMeters(numLat, numLng, r.lat, r.lng);
+      const isInsideZone = distance <= radius;
+
+      if (!isInsideZone) return null;
+
+      // Check if user is a supervisor/technician or has an active authorized PT/APR
+      const isSupervisor =
+        roleType === 'sst' ||
+        roleType === 'admin' ||
+        roleType === 'brigadista' ||
+        (req.user?.roleName || '').toLowerCase().includes('supervisor');
+
+      const isExplicitlyAuthorized = (r.authorized_employee_ids || []).includes(matchedEmp?.id || '');
+
+      const activePts = allDocs.filter(
+        d =>
+          (d.type === 'PT' || d.type === 'PET' || d.type.startsWith('APR_')) &&
+          d.status === 'ativa' &&
+          d.location_id === r.id
+      );
+
+      const isWorkerInActivePt = activePts.some(pt => {
+        const workers = pt.data?.authorizedWorkers || [];
+        const isListed = workers.some((w: any) => (typeof w === 'string' ? w : w.id) === matchedEmp?.id);
+        const isEmissor = pt.created_by_user_id === req.user?.id;
+        return isListed || isEmissor;
+      });
+
+      const isAuthorized = isSupervisor || isExplicitlyAuthorized || isWorkerInActivePt;
+
       return {
         id: r.id,
         name: r.name,
         risk_type: r.risk_type,
         distance,
-        isInsideZone: distance <= 25,
+        radius,
+        isInsideZone: true,
+        isUnauthorizedIntrusion: !isAuthorized,
         required_epis: r.required_epis || []
       };
     })
-    .filter(r => r.isInsideZone);
+    .filter(Boolean);
 
   return res.json({
     success: true,

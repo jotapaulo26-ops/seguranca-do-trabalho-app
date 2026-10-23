@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useRef, useState } from 'r
 import { useAuth } from './AuthContext';
 import { api } from '../services/api';
 import { ActiveUserLocation, NearbyRiskAlert } from '../types';
+import { showGeofenceNotification, requestNotificationPermission } from '../services/notificationService';
 
 interface MyGPSLocation {
   lat: number;
@@ -97,11 +98,16 @@ export const TrackingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           if (firstUnnotified) {
             setActiveProximityAlert(firstUnnotified);
 
-            // Trigger sound and vibration
-            playProximityWarningSound();
-            if (navigator.vibrate) {
-              navigator.vibrate([200, 100, 200, 100, 300]);
-            }
+            // Trigger background push notification on device (even outside app)
+            showGeofenceNotification({
+              riskId: firstUnnotified.id,
+              riskName: firstUnnotified.name,
+              riskType: firstUnnotified.risk_type,
+              distance: firstUnnotified.distance,
+              radius: firstUnnotified.radius || 25,
+              isUnauthorizedIntrusion: firstUnnotified.isUnauthorizedIntrusion,
+              requiredEpis: firstUnnotified.required_epis
+            });
           }
         } else {
           setActiveProximityAlert(null);
@@ -122,6 +128,9 @@ export const TrackingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     setGpsError(null);
     setIsTracking(true);
+
+    // Request background notification permission for geofence alerts
+    requestNotificationPermission();
 
     if (watchIdRef.current !== null) {
       navigator.geolocation.clearWatch(watchIdRef.current);

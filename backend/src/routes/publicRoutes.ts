@@ -174,7 +174,10 @@ publicRoutes.get('/employee/:id', (req: Request, res: Response) => {
     return res.status(404).json({ error: 'Colaborador não encontrado.' });
   }
 
-  const trainings = (emp.trainings || []).map(t => ({
+  const empTrainings = db.trainings.findByEmployeeId(id);
+  const empEpis = db.epis.findByEmployeeId(id);
+
+  const trainings = empTrainings.map((t) => ({
     type: t.type,
     institution: t.institution,
     completion_date: t.completion_date,
@@ -182,7 +185,7 @@ publicRoutes.get('/employee/:id', (req: Request, res: Response) => {
     status: getExpiryStatus(t.expiry_date)
   }));
 
-  const epis = (emp.epis || []).map(e => ({
+  const epis = empEpis.map((e) => ({
     name: e.name,
     ca_number: e.ca_number,
     delivery_date: e.delivery_date,
@@ -190,9 +193,9 @@ publicRoutes.get('/employee/:id', (req: Request, res: Response) => {
   }));
 
   // Check if fully qualified for Height (NR-35) and Confined Space (NR-33)
-  const hasNr35 = trainings.some(t => t.type.toLowerCase().includes('35') && t.status !== 'vencido');
-  const hasNr33 = trainings.some(t => t.type.toLowerCase().includes('33') && t.status !== 'vencido');
-  const hasNr10 = trainings.some(t => t.type.toLowerCase().includes('10') && t.status !== 'vencido');
+  const hasNr35 = trainings.some((t) => t.type.toLowerCase().includes('35') && t.status !== 'vencido');
+  const hasNr33 = trainings.some((t) => t.type.toLowerCase().includes('33') && t.status !== 'vencido');
+  const hasNr10 = trainings.some((t) => t.type.toLowerCase().includes('10') && t.status !== 'vencido');
 
   return res.json({
     id: emp.id,

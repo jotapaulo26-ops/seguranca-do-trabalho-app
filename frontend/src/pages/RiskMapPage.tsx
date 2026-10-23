@@ -19,7 +19,8 @@ import {
   Trash2,
   Edit,
   ExternalLink,
-  Crosshair
+  Crosshair,
+  Radio
 } from 'lucide-react';
 
 const COMMON_EPIS = [
@@ -63,6 +64,7 @@ export const RiskMapPage: React.FC = () => {
     lng: USINA_SANTA_ISABEL_COORDS.lng,
     risk_type: 'altura' as 'altura' | 'espaco_confinado' | 'ambos',
     description: '',
+    geofence_radius: 25,
     required_epis: [] as string[],
     authorized_employee_ids: [] as string[],
     photo_url: ''
@@ -103,6 +105,7 @@ export const RiskMapPage: React.FC = () => {
       lng: coords.lng,
       name: '',
       description: '',
+      geofence_radius: formData.geofence_radius || 25,
       required_epis: [],
       authorized_employee_ids: []
     });
@@ -193,6 +196,7 @@ export const RiskMapPage: React.FC = () => {
                 lng: USINA_SANTA_ISABEL_COORDS.lng,
                 risk_type: 'altura',
                 description: '',
+                geofence_radius: 25,
                 required_epis: [],
                 authorized_employee_ids: [],
                 photo_url: ''
@@ -215,6 +219,21 @@ export const RiskMapPage: React.FC = () => {
           onAddPointClick={handleMapClick}
           onGenerateApr={handleGenerateAprForSpot}
           onShowQrCode={(loc) => setQrModalLocation(loc)}
+          previewCircle={
+            addModalOpen
+              ? {
+                  lat: formData.lat,
+                  lng: formData.lng,
+                  radius: formData.geofence_radius || 25,
+                  color:
+                    formData.risk_type === 'espaco_confinado'
+                      ? '#8b5cf6'
+                      : formData.risk_type === 'altura'
+                      ? '#f59e0b'
+                      : '#ef4444'
+                }
+              : null
+          }
           initialCenter={[-21.5083, -49.2081]}
           zoom={16}
           height="600px"
@@ -259,6 +278,19 @@ export const RiskMapPage: React.FC = () => {
 
               <div className="py-3 text-xs text-slate-600">
                 <p className="mb-3 leading-relaxed">{selectedLocation.description}</p>
+
+                {/* Raio da Cerca Virtual Georreferenciada */}
+                <div className="mb-3 flex items-center gap-2.5 p-2.5 bg-amber-50/70 border border-amber-200 rounded-xl">
+                  <Radio className="w-5 h-5 text-amber-600 shrink-0" />
+                  <div>
+                    <span className="font-bold text-slate-900 text-xs block">
+                      Cerca Virtual Georreferenciada: {selectedLocation.geofence_radius || 25} metros
+                    </span>
+                    <span className="text-[11px] text-slate-600">
+                      Dispara alarme sonoro e notificação imediata no celular do colaborador ao entrar neste raio.
+                    </span>
+                  </div>
+                </div>
 
                 {/* Required EPIs */}
                 {selectedLocation.required_epis && selectedLocation.required_epis.length > 0 && (
@@ -385,6 +417,56 @@ export const RiskMapPage: React.FC = () => {
                       required
                     />
                   </div>
+                </div>
+              </div>
+
+              {/* Raio da Cerca Virtual (Geofence Radius) com Live Preview */}
+              <div className="bg-amber-50/70 p-3.5 rounded-2xl border border-amber-200">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <Radio className="w-4 h-4 text-amber-600 animate-pulse" />
+                    Raio da Cerca Virtual de Alerta:
+                  </label>
+                  <span className="text-xs font-mono font-extrabold px-2.5 py-0.5 rounded-lg bg-amber-500 text-slate-950 shadow-sm">
+                    {formData.geofence_radius || 25} metros
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-600 mb-2.5 leading-tight">
+                  Colaboradores que entrarem no círculo desta cerca receberão aviso no celular em segundo plano e alarme sonoro.
+                </p>
+
+                {/* Slider */}
+                <input
+                  type="range"
+                  min="5"
+                  max="200"
+                  step="5"
+                  value={formData.geofence_radius || 25}
+                  onChange={(e) => setFormData({ ...formData, geofence_radius: parseInt(e.target.value, 10) })}
+                  className="w-full accent-amber-500 cursor-pointer mb-2"
+                />
+
+                {/* Presets */}
+                <div className="grid grid-cols-4 gap-1.5">
+                  {[
+                    { label: '15m (Estrito)', val: 15 },
+                    { label: '30m (Padrão)', val: 30 },
+                    { label: '50m (Amplo)', val: 50 },
+                    { label: '100m (Geral)', val: 100 }
+                  ].map((p) => (
+                    <button
+                      key={p.val}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, geofence_radius: p.val })}
+                      className={`text-[10px] font-semibold py-1.5 px-1 rounded-lg border text-center transition-all ${
+                        formData.geofence_radius === p.val
+                          ? 'bg-amber-500 text-slate-950 border-amber-600 font-bold shadow-sm'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-amber-100/50'
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 

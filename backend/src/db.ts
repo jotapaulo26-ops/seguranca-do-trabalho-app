@@ -83,6 +83,7 @@ export interface RiskLocation {
   lng: number;
   risk_type: 'altura' | 'espaco_confinado' | 'ambos' | 'outro';
   description: string;
+  geofence_radius?: number;
   required_epis: string[];
   authorized_employee_ids: string[];
   photo_url?: string;
@@ -115,6 +116,7 @@ export interface DocumentRecord {
   description?: string;
   location_id?: string;
   employee_id?: string;
+  employee_name?: string;
   apr_id?: string;
   status: 'rascunho' | 'ativa' | 'encerrada' | 'cancelada' | 'homologado';
   data: any; // Dynamic JSON for APR/PT/OS/EPI/Checklist fields
@@ -1124,6 +1126,9 @@ export function initDatabase(): void {
   };
 
   (memoryDb.risk_locations || []).forEach(r => {
+    if (!r.geofence_radius) {
+      r.geofence_radius = 25;
+    }
     if (usinaRisks[r.id]) {
       r.lat = usinaRisks[r.id].lat;
       r.lng = usinaRisks[r.id].lng;
