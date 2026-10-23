@@ -19,7 +19,9 @@ import {
   X,
   Phone,
   Mail,
-  Calendar
+  Calendar,
+  QrCode,
+  Download
 } from 'lucide-react';
 
 export const Employees: React.FC = () => {
@@ -33,6 +35,17 @@ export const Employees: React.FC = () => {
   const [employeeModalOpen, setEmployeeModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [manageModalEmployee, setManageModalEmployee] = useState<Employee | null>(null);
+  const [badgeQrModal, setBadgeQrModal] = useState<{ employee: Employee; qrDataUrl: string } | null>(null);
+
+  const handleOpenBadgeQr = async (emp: Employee) => {
+    try {
+      const origin = encodeURIComponent(window.location.origin);
+      const res = await api.get<{ qrCodeDataUrl: string }>(`/employees/${emp.id}/qrcode?origin=${origin}`);
+      setBadgeQrModal({ employee: emp, qrDataUrl: res.qrCodeDataUrl });
+    } catch (err: any) {
+      alert('Erro ao gerar QR Code do crachá: ' + (err.message || 'Falha de comunicação.'));
+    }
+  };
 
   // Form states for Create/Edit Employee
   const [formData, setFormData] = useState({
@@ -407,6 +420,14 @@ export const Employees: React.FC = () => {
                 >
                   <Award className="w-3.5 h-3.5 text-amber-600" />
                   Treinamentos & EPIs
+                </button>
+
+                <button
+                  onClick={() => handleOpenBadgeQr(emp)}
+                  className="p-2 text-slate-500 hover:text-amber-600 rounded-xl hover:bg-amber-50 border border-slate-200 transition-colors"
+                  title="Ver Crachá Digital SST (QR Code)"
+                >
+                  <QrCode className="w-4 h-4" />
                 </button>
 
                 {can('employees', 'edit') && (
@@ -823,6 +844,172 @@ export const Employees: React.FC = () => {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: CRACHÁ DIGITAL SST COM QR CODE */}
+      {badgeQrModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 relative animate-in fade-in zoom-in-95 duration-150">
+            <button
+              onClick={() => setBadgeQrModal(null)}
+              className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Crachá Card */}
+            <div className="text-center p-4 border-2 border-slate-900 rounded-2xl bg-white mb-4">
+              <div className="bg-slate-900 text-white py-1.5 px-3 rounded-lg flex items-center justify-center gap-2 mb-3">
+                <Shield className="w-4 h-4 text-amber-400" />
+                <span className="font-black text-xs tracking-wider uppercase">CRACHÁ DIGITAL SST</span>
+              </div>
+
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-700 mx-auto flex items-center justify-center text-2xl font-black text-white shadow-md mb-2">
+                {badgeQrModal.employee.name.charAt(0)}
+              </div>
+
+              <h3 className="font-black text-slate-900 text-base leading-tight">{badgeQrModal.employee.name}</h3>
+              <p className="text-xs text-slate-500 font-bold">{badgeQrModal.employee.role}</p>
+              <p className="text-[10px] text-slate-400 font-mono mb-3">{badgeQrModal.employee.department} • Matrícula: {badgeQrModal.employee.registration_number || 'S/N'}</p>
+
+              <div className="flex justify-center mb-3">
+                <img
+                  src={badgeQrModal.qrDataUrl}
+                  alt={`QR Code ${badgeQrModal.employee.name}`}
+                  className="w-44 h-44 border border-slate-200 rounded-xl p-1 shadow-sm"
+                />
+              </div>
+
+              <p className="text-[10px] text-slate-500 font-bold leading-tight">
+                Aponte a câmera para consultar a validade dos treinamentos (NR-35/NR-33) e EPIs ativos deste trabalhador.
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  const a = document.createElement('a');
+                  a.href = badgeQrModal.qrDataUrl;
+                  a.download = `Cracha_SST_${badgeQrModal.employee.name.replace(/\s+/g, '_')}.png`;
+                  a.click();
+                }}
+                className="flex-1 py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                Salvar Imagem
+              </button>
+
+              <button
+                onClick={() => {
+                  const win = window.open('', '_blank');
+                  if (win) {
+                    win.document.write(`
+                      <!DOCTYPE html>
+                      <html>
+                        <head>
+                          <title>Crachá SST - ${badgeQrModal.employee.name}</title>
+                          <style>
+                            @page { size: A4 portrait; margin: 15mm; }
+                            * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+                            body { margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 90vh; }
+                            .badge-card {
+                              border: 4px solid #0f172a;
+                              border-radius: 20px;
+                              width: 100%;
+                              max-width: 420px;
+                              text-align: center;
+                              overflow: hidden;
+                              box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+                            }
+                            .header {
+                              background: #0f172a;
+                              color: #f59e0b;
+                              padding: 14px;
+                              font-size: 16px;
+                              font-weight: 900;
+                              text-transform: uppercase;
+                              letter-spacing: 1.5px;
+                            }
+                            .body {
+                              padding: 24px;
+                              background: #fff;
+                            }
+                            .avatar {
+                              width: 70px;
+                              height: 70px;
+                              border-radius: 16px;
+                              background: #f59e0b;
+                              color: #fff;
+                              font-size: 32px;
+                              font-weight: 900;
+                              display: flex;
+                              align-items: center;
+                              justify-content: center;
+                              margin: 0 auto 12px;
+                            }
+                            .name {
+                              font-size: 20px;
+                              font-weight: 900;
+                              color: #0f172a;
+                              margin: 0 0 4px;
+                            }
+                            .role {
+                              font-size: 14px;
+                              font-weight: 700;
+                              color: #64748b;
+                              margin: 0 0 16px;
+                            }
+                            .qr {
+                              width: 220px;
+                              height: 220px;
+                              margin: 0 auto 16px;
+                              display: block;
+                            }
+                            .instr {
+                              font-size: 12px;
+                              color: #334155;
+                              font-weight: 600;
+                              margin: 0 0 16px;
+                            }
+                            .footer {
+                              border-top: 1px dashed #cbd5e1;
+                              padding-top: 10px;
+                              font-size: 10px;
+                              color: #94a3b8;
+                              font-weight: 700;
+                              text-transform: uppercase;
+                            }
+                          </style>
+                        </head>
+                        <body>
+                          <div class="badge-card">
+                            <div class="header">🛡️ CRACHÁ DIGITAL SST</div>
+                            <div class="body">
+                              <div class="avatar">${badgeQrModal.employee.name.charAt(0)}</div>
+                              <h2 class="name">${badgeQrModal.employee.name}</h2>
+                              <p class="role">${badgeQrModal.employee.role} • ${badgeQrModal.employee.department}</p>
+                              <img src="${badgeQrModal.qrDataUrl}" class="qr" />
+                              <p class="instr">APONTE A CÂMERA PARA VERIFICAR APTIDÃO (NR-35 / NR-33) E EPIS DO TRABALHADOR</p>
+                              <div class="footer">Usina Santa Isabel • SegTrabalho SST</div>
+                            </div>
+                          </div>
+                          <script>
+                            window.onload = function() { window.print(); };
+                          </script>
+                        </body>
+                      </html>
+                    `);
+                    win.document.close();
+                  }
+                }}
+                className="flex-1 py-2.5 px-3 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 shadow-md transition-colors"
+              >
+                Imprimir Crachá
+              </button>
+            </div>
           </div>
         </div>
       )}

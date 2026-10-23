@@ -14,6 +14,7 @@ import { AuditLogsPage } from './pages/AuditLogsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { BrigadePage } from './pages/BrigadePage';
 import { PublicSignaturePage } from './pages/PublicSignaturePage';
+import { QRDispatcherPage } from './pages/QRDispatcherPage';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoading } = useAuth();
@@ -40,6 +41,7 @@ export function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/assinar-documento" element={<PublicSignaturePage />} />
+          <Route path="/qr" element={<QRDispatcherPage />} />
 
           <Route
             path="/"

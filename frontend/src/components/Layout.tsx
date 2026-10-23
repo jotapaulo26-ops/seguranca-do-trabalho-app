@@ -17,8 +17,10 @@ import {
   AlertTriangle,
   Smartphone,
   PlusCircle,
-  Flame
+  Flame,
+  QrCode
 } from 'lucide-react';
+import { QRScannerModal } from './QRScannerModal';
 
 export const Layout: React.FC = () => {
   const { user, logout, can } = useAuth();
@@ -30,6 +32,7 @@ export const Layout: React.FC = () => {
     totalExpiringSoon: 0
   });
   const [brigadeAlerts, setBrigadeAlerts] = useState<number>(0);
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   const deviceId = getDeviceId();
 
@@ -125,6 +128,17 @@ export const Layout: React.FC = () => {
           })}
         </nav>
 
+        {/* QR Code Scanner Quick Button */}
+        <div className="px-3 mb-2">
+          <button
+            onClick={() => setScannerOpen(true)}
+            className="w-full py-2.5 px-3 bg-gradient-to-r from-amber-500/20 to-amber-600/20 hover:from-amber-500/30 hover:to-amber-600/30 text-amber-300 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border border-amber-500/40 transition-all shadow-sm active:scale-95"
+          >
+            <QrCode className="w-4 h-4 text-amber-400" />
+            <span>Bipar / Ler QR Code</span>
+          </button>
+        </div>
+
         {/* Device Tracker Box in Desktop Sidebar */}
         <div className="px-4 py-3 mx-3 mb-3 bg-slate-800/80 rounded-xl border border-slate-700/60">
           <div className="flex items-center gap-2 text-slate-400 text-[11px] mb-1">
@@ -174,6 +188,13 @@ export const Layout: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setScannerOpen(true)}
+            title="Escanear QR Code de Campo"
+            className="p-1.5 text-amber-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+          >
+            <QrCode className="w-5 h-5" />
+          </button>
           {alertSummary.totalExpired > 0 && (
             <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 animate-pulse">
               <AlertTriangle className="w-3 h-3" />
@@ -338,6 +359,9 @@ export const Layout: React.FC = () => {
           <span>Equipe</span>
         </NavLink>
       </div>
+
+      {/* Integrated Camera QR Scanner Modal */}
+      <QRScannerModal isOpen={scannerOpen} onClose={() => setScannerOpen(false)} />
     </div>
   );
 };

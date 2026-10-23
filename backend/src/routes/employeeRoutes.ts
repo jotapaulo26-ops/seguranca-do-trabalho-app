@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import QRCode from 'qrcode';
 import { db, Employee, Training, EPI } from '../db.js';
 import { authenticateToken, requirePermission, logAudit } from '../auth.js';
 
@@ -269,4 +270,28 @@ employeeRoutes.delete('/:id/epis/:epiId', authenticateToken, requirePermission('
   if (!removed) return res.status(404).json({ error: 'EPI não encontrado.' });
 
   return res.json({ message: 'EPI removido.' });
+});
+
+// QR Code for Employee Badge (Crachá Digital)
+employeeRoutes.get('/:id/qrcode', authenticateToken, async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const emp = db.employees.findById(id);
+  if (!emp) return res.status(404).json({ error: 'Funcionário não encontrado.' });
+
+  try {
+    const proto = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'http';
+    const host = req.get('host') || 'localhost:5000';
+    const hostOrigin = (req.query.origin as string) || `${proto}://${host}`;
+    const directUrl = `${hostOrigin}/qr?type=employee&id=${emp.id}`;
+
+    const qrDataUrl = await QRCode.toDataURL(directUrl, {
+      width: 400,
+      margin: 2,
+      color: { dark: '#0f172a', light: '#ffffff' }
+    });
+
+    return res.json({ qrCodeDataUrl: qrDataUrl, directUrl, payload: directUrl });
+  } catch (err) {
+    return res.status(500).json({ error: 'Erro ao gerar QR Code do funcionário' });
+  }
 });

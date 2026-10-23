@@ -293,7 +293,8 @@ export const BrigadePage: React.FC = () => {
   // Fetch QR Code for Extinguisher
   const handleOpenQrCode = async (ext: Extinguisher) => {
     try {
-      const res = await api.get<{ qrCodeDataUrl: string }>(`/brigade/extinguishers/${ext.id}/qrcode`);
+      const origin = encodeURIComponent(window.location.origin);
+      const res = await api.get<{ qrCodeDataUrl: string }>(`/brigade/extinguishers/${ext.id}/qrcode?origin=${origin}`);
       setQrCodeData({
         code: ext.code,
         location: ext.location_name,
@@ -2212,24 +2213,114 @@ export const BrigadePage: React.FC = () => {
 
             <button
               onClick={() => {
-                const win = window.open('');
+                const win = window.open('', '_blank');
                 if (win) {
                   win.document.write(`
+                    <!DOCTYPE html>
                     <html>
-                      <head><title>Placa ${qrCodeData.code}</title></head>
-                      <body style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;">
-                        <h1 style="margin:0;font-size:32px;">🧯 EXTINTOR DE INCÊNDIO</h1>
-                        <h2 style="margin:4px 0 16px;color:#dc2626;">TAG: ${qrCodeData.code}</h2>
-                        <img src="${qrCodeData.dataUrl}" style="width:280px;height:280px;"/>
-                        <p style="font-size:16px;font-weight:bold;margin-top:16px;">${qrCodeData.location}</p>
-                        <p style="font-size:12px;color:#666;">SegTrabalho - Brigada de Incêndio</p>
+                      <head>
+                        <title>Placa Extintor ${qrCodeData.code}</title>
+                        <style>
+                          @page { size: A4 portrait; margin: 15mm; }
+                          * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+                          body { margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 90vh; }
+                          .plate-card {
+                            border: 8px solid #dc2626;
+                            border-radius: 24px;
+                            width: 100%;
+                            max-width: 550px;
+                            text-align: center;
+                            overflow: hidden;
+                            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+                          }
+                          .header-strip {
+                            background: #dc2626;
+                            color: #ffffff;
+                            padding: 16px 20px;
+                            font-size: 22px;
+                            font-weight: 900;
+                            text-transform: uppercase;
+                            letter-spacing: 2px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 10px;
+                          }
+                          .content-body {
+                            padding: 28px 24px;
+                            background: #fff;
+                          }
+                          .tag-code {
+                            font-size: 32px;
+                            font-weight: 900;
+                            color: #0f172a;
+                            margin: 0 0 8px;
+                            font-family: monospace;
+                          }
+                          .location-name {
+                            font-size: 16px;
+                            font-weight: 700;
+                            color: #475569;
+                            margin: 0 0 20px;
+                          }
+                          .qr-image {
+                            width: 280px;
+                            height: 280px;
+                            margin: 0 auto 16px;
+                            display: block;
+                            border: 3px solid #e2e8f0;
+                            border-radius: 16px;
+                            padding: 8px;
+                          }
+                          .instruction {
+                            font-size: 14px;
+                            font-weight: 700;
+                            color: #1e293b;
+                            line-height: 1.4;
+                            margin: 0 0 20px;
+                          }
+                          .footer-info {
+                            border-top: 2px dashed #cbd5e1;
+                            padding-top: 14px;
+                            font-size: 11px;
+                            color: #64748b;
+                            font-weight: 600;
+                            text-transform: uppercase;
+                          }
+                        </style>
+                      </head>
+                      <body>
+                        <div class="plate-card">
+                          <div class="header-strip">
+                            🧯 EQUIPAMENTO DE COMBATE A INCÊNDIO
+                          </div>
+                          <div class="content-body">
+                            <h1 class="tag-code">${qrCodeData.code}</h1>
+                            <p class="location-name">${qrCodeData.location}</p>
+
+                            <img src="${qrCodeData.dataUrl}" class="qr-image" />
+
+                            <p class="instruction">
+                              APONTE A CÂMERA DO SMARTPHONE PARA ACESSAR A FICHA DO EQUIPAMENTO E REGISTRAR A INSPEÇÃO MENSAL
+                            </p>
+
+                            <div class="footer-info">
+                              Usina Santa Isabel • Brigada de Incêndio SST • Norma NBR 12962 / NR-23
+                            </div>
+                          </div>
+                        </div>
+                        <script>
+                          window.onload = function() {
+                            window.print();
+                          };
+                        </script>
                       </body>
                     </html>
                   `);
-                  win.print();
+                  win.document.close();
                 }
               }}
-              className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-md"
+              className="w-full py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-colors"
             >
               <Download className="w-4 h-4" />
               Imprimir Placa de Identificação

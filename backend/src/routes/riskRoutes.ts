@@ -49,17 +49,13 @@ riskRoutes.get('/:id/qrcode', authenticateToken, async (req: Request, res: Respo
   if (!risk) return res.status(404).json({ error: 'Ponto de risco não encontrado.' });
 
   try {
-    // Generate QR code pointing to this risk spot's detail/APR trigger
-    const qrPayload = JSON.stringify({
-      type: 'SEG_RISK_SPOT',
-      id: risk.id,
-      name: risk.name,
-      riskType: risk.risk_type,
-      url: `/mapa?spotId=${risk.id}`
-    });
+    const proto = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'http';
+    const host = req.get('host') || 'localhost:5000';
+    const hostOrigin = (req.query.origin as string) || `${proto}://${host}`;
+    const directUrl = `${hostOrigin}/qr?type=risk&id=${risk.id}`;
 
-    const qrDataUrl = await QRCode.toDataURL(qrPayload, {
-      width: 350,
+    const qrDataUrl = await QRCode.toDataURL(directUrl, {
+      width: 400,
       margin: 2,
       color: {
         dark: '#0f172a',
@@ -67,7 +63,7 @@ riskRoutes.get('/:id/qrcode', authenticateToken, async (req: Request, res: Respo
       }
     });
 
-    return res.json({ qrCodeDataUrl: qrDataUrl, payload: qrPayload });
+    return res.json({ qrCodeDataUrl: qrDataUrl, directUrl, payload: directUrl });
   } catch (err) {
     return res.status(500).json({ error: 'Erro ao gerar QR Code' });
   }

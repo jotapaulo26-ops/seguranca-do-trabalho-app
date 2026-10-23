@@ -255,22 +255,18 @@ brigadeRoutes.get('/extinguishers/:id/qrcode', authenticateToken, async (req: Re
   if (!ext) return res.status(404).json({ error: 'Extintor não encontrado.' });
 
   try {
-    const payload = JSON.stringify({
-      app: 'SegTrabalho',
-      type: 'EXTINGUISHER',
-      id: ext.id,
-      code: ext.code,
-      agent: ext.type,
-      location: ext.location_name
-    });
+    const proto = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'http';
+    const host = req.get('host') || 'localhost:5000';
+    const hostOrigin = (req.query.origin as string) || `${proto}://${host}`;
+    const directUrl = `${hostOrigin}/qr?type=extinguisher&id=${ext.id}`;
 
-    const qrDataUrl = await QRCode.toDataURL(payload, {
-      width: 350,
+    const qrDataUrl = await QRCode.toDataURL(directUrl, {
+      width: 400,
       margin: 2,
       color: { dark: '#0f172a', light: '#ffffff' }
     });
 
-    return res.json({ qrCodeDataUrl: qrDataUrl, payload });
+    return res.json({ qrCodeDataUrl: qrDataUrl, directUrl, payload: directUrl });
   } catch (err) {
     return res.status(500).json({ error: 'Erro ao gerar QR Code do extintor' });
   }
@@ -428,6 +424,30 @@ brigadeRoutes.delete('/meeting-points/:id', authenticateToken, requirePermission
   logAudit(req, 'EXCLUIR_PONTO_ENCONTRO', 'BRIGADA', `Ponto de encontro ${mp.code} removido`);
 
   return res.json({ message: 'Ponto de encontro excluído com sucesso.' });
+});
+
+// QR Code for Meeting Point
+brigadeRoutes.get('/meeting-points/:id/qrcode', authenticateToken, async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const mp = db.meetingPoints.findById(id);
+  if (!mp) return res.status(404).json({ error: 'Ponto de encontro não encontrado.' });
+
+  try {
+    const proto = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'http';
+    const host = req.get('host') || 'localhost:5000';
+    const hostOrigin = (req.query.origin as string) || `${proto}://${host}`;
+    const directUrl = `${hostOrigin}/qr?type=meeting_point&id=${mp.id}`;
+
+    const qrDataUrl = await QRCode.toDataURL(directUrl, {
+      width: 400,
+      margin: 2,
+      color: { dark: '#0f172a', light: '#ffffff' }
+    });
+
+    return res.json({ qrCodeDataUrl: qrDataUrl, directUrl, payload: directUrl });
+  } catch (err) {
+    return res.status(500).json({ error: 'Erro ao gerar QR Code do ponto de encontro' });
+  }
 });
 
 // 7. EVACUATION DRILLS (SIMULADOS DE ABANDONO)

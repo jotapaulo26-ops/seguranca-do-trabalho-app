@@ -1,6 +1,6 @@
 import { getDeviceId } from './deviceId';
 
-const API_BASE_URL = '/api';
+export const API_BASE_URL = '/api';
 
 export async function apiRequest<T = any>(
   endpoint: string,
