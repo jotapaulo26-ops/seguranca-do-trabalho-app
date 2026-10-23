@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Employee, Training, EPI } from '../types';
+import { FrontalCameraModal } from '../components/FrontalCameraModal';
 import {
   Users,
   UserPlus,
@@ -21,7 +22,9 @@ import {
   Mail,
   Calendar,
   QrCode,
-  Download
+  Download,
+  Camera,
+  Sparkles
 } from 'lucide-react';
 
 export const Employees: React.FC = () => {
@@ -36,6 +39,19 @@ export const Employees: React.FC = () => {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [manageModalEmployee, setManageModalEmployee] = useState<Employee | null>(null);
   const [badgeQrModal, setBadgeQrModal] = useState<{ employee: Employee; qrDataUrl: string } | null>(null);
+  const [faceCaptureEmployee, setFaceCaptureEmployee] = useState<Employee | null>(null);
+
+  const handleSaveFaceBiometrics = async (compressedDataUrl: string) => {
+    if (!faceCaptureEmployee) return;
+    try {
+      await api.post(`/employees/${faceCaptureEmployee.id}/biometrics`, { photo_url: compressedDataUrl });
+      loadEmployees();
+      setFaceCaptureEmployee(null);
+      alert(`Biometria facial de ${faceCaptureEmployee.name} salva com sucesso!`);
+    } catch (err: any) {
+      alert('Erro ao salvar biometria: ' + (err.message || 'Falha de comunicação.'));
+    }
+  };
 
   const handleOpenBadgeQr = async (emp: Employee) => {
     try {
@@ -321,9 +337,17 @@ export const Employees: React.FC = () => {
                 {/* Card Top: Avatar, Name & Compliance status */}
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-2xl bg-slate-900 text-amber-400 flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
-                      {emp.name.charAt(0).toUpperCase()}
-                    </div>
+                    {emp.photo_url ? (
+                      <img
+                        src={emp.photo_url}
+                        alt={emp.name}
+                        className="w-11 h-11 rounded-2xl object-cover border-2 border-emerald-400 shadow-sm shrink-0"
+                      />
+                    ) : (
+                      <div className="w-11 h-11 rounded-2xl bg-slate-900 text-amber-400 flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
+                        {emp.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
                     <div>
                       <h4 className="font-bold text-slate-900 text-sm leading-tight">{emp.name}</h4>
                       <p className="text-xs font-medium text-slate-500">{emp.role}</p>
@@ -331,23 +355,32 @@ export const Employees: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Status Indicator */}
-                  {emp.complianceStatus === 'critico' ? (
-                    <span className="text-[10px] bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0 animate-pulse" title="Treinamento Vencido!">
-                      <AlertTriangle className="w-3 h-3" />
-                      Vencido
-                    </span>
-                  ) : emp.complianceStatus === 'alerta' ? (
-                    <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0" title="Vence em menos de 30 dias">
-                      <Clock className="w-3 h-3" />
-                      Vence Breve
-                    </span>
-                  ) : (
-                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0">
-                      <CheckCircle2 className="w-3 h-3" />
-                      Em Dia
-                    </span>
-                  )}
+                  <div className="flex flex-col items-end gap-1">
+                    {/* Status Indicator */}
+                    {emp.complianceStatus === 'critico' ? (
+                      <span className="text-[10px] bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0 animate-pulse" title="Treinamento Vencido!">
+                        <AlertTriangle className="w-3 h-3" />
+                        Vencido
+                      </span>
+                    ) : emp.complianceStatus === 'alerta' ? (
+                      <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0" title="Vence em menos de 30 dias">
+                        <Clock className="w-3 h-3" />
+                        Vence Breve
+                      </span>
+                    ) : (
+                      <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0">
+                        <CheckCircle2 className="w-3 h-3" />
+                        Em Dia
+                      </span>
+                    )}
+
+                    {emp.photo_url ? (
+                      <span className="text-[9px] bg-teal-50 text-teal-700 font-semibold px-1.5 py-0.2 rounded border border-teal-200 flex items-center gap-1">
+                        <Sparkles className="w-2.5 h-2.5 text-teal-600" />
+                        Face OK
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
 
                 {/* Personal / Registration details */}
@@ -428,6 +461,18 @@ export const Employees: React.FC = () => {
                   title="Ver Crachá Digital SST (QR Code)"
                 >
                   <QrCode className="w-4 h-4" />
+                </button>
+
+                <button
+                  onClick={() => setFaceCaptureEmployee(emp)}
+                  className={`p-2 rounded-xl border transition-colors ${
+                    emp.photo_url
+                      ? 'text-teal-600 hover:text-teal-700 bg-teal-50 border-teal-200'
+                      : 'text-slate-500 hover:text-amber-600 hover:bg-amber-50 border-slate-200'
+                  }`}
+                  title={emp.photo_url ? 'Atualizar Biometria Facial (Câmera Frontal)' : 'Cadastrar Biometria Facial (Câmera Frontal)'}
+                >
+                  <Camera className="w-4 h-4" />
                 </button>
 
                 {can('employees', 'edit') && (
@@ -1013,6 +1058,14 @@ export const Employees: React.FC = () => {
           </div>
         </div>
       )}
+      {/* Frontal Camera Viewfinder Modal for Face Biometrics Registration */}
+      <FrontalCameraModal
+        isOpen={!!faceCaptureEmployee}
+        onClose={() => setFaceCaptureEmployee(null)}
+        onCapture={handleSaveFaceBiometrics}
+        workerName={faceCaptureEmployee?.name}
+        title="Cadastro de Biometria Facial SST"
+      />
     </div>
   );
 };

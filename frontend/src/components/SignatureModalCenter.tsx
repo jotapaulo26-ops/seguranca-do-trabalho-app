@@ -3,6 +3,8 @@ import QRCode from 'qrcode';
 import { DocumentRecord, RequiredSigner, DigitalSignature } from '../types';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { FrontalCameraModal } from './FrontalCameraModal';
+import { compareFaces, BiometricMatchResult } from '../services/facialBiometrics';
 import {
   X,
   PenTool,
@@ -21,7 +23,9 @@ import {
   HardHat,
   Eye,
   Check,
-  Download
+  Download,
+  Sparkles,
+  User
 } from 'lucide-react';
 
 interface SignatureModalCenterProps {
@@ -44,8 +48,12 @@ export const SignatureModalCenter: React.FC<SignatureModalCenterProps> = ({
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(false);
 
-  // Photo selfie state
+  // Photo selfie & Frontal Camera state
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
+  const [cameraModalOpen, setCameraModalOpen] = useState(false);
+  const [workerReferencePhoto, setWorkerReferencePhoto] = useState<string | null>(null);
+  const [biometricResult, setBiometricResult] = useState<BiometricMatchResult | null>(null);
+  const [isRegisteringBiometrics, setIsRegisteringBiometrics] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // QR Code state
@@ -68,7 +76,7 @@ export const SignatureModalCenter: React.FC<SignatureModalCenterProps> = ({
     requiredWorkers: []
   };
 
-  // Reload document to ensure fresh status
+  // Reload document to ensure fresh status and full signatures on mount
   const refreshDocument = async () => {
     try {
       const refreshed = await api.get<DocumentRecord>(`/documents/${doc.id}`);
@@ -78,6 +86,38 @@ export const SignatureModalCenter: React.FC<SignatureModalCenterProps> = ({
       console.error('Erro ao atualizar documento:', err);
     }
   };
+
+  useEffect(() => {
+    refreshDocument();
+  }, [doc.id]);
+
+  // Load worker reference biometrics when a worker is selected
+  useEffect(() => {
+    if (!selectedWorker) {
+      setHasDrawn(false);
+      setPhotoDataUrl(null);
+      setWorkerReferencePhoto(null);
+      setBiometricResult(null);
+      return;
+    }
+
+    async function loadWorkerBiometrics() {
+      try {
+        const emps = await api.get<any[]>('/employees').catch(() => []);
+        const emp = emps.find(
+          (e: any) => e.id === selectedWorker?.id || (selectedWorker?.cpf && e.cpf === selectedWorker.cpf)
+        );
+        if (emp && emp.photo_url) {
+          setWorkerReferencePhoto(emp.photo_url);
+        } else {
+          setWorkerReferencePhoto(null);
+        }
+      } catch {
+        setWorkerReferencePhoto(null);
+      }
+    }
+    loadWorkerBiometrics();
+  }, [selectedWorker]);
 
   // Setup canvas when a worker is selected for signing
   useEffect(() => {
@@ -184,14 +224,56 @@ export const SignatureModalCenter: React.FC<SignatureModalCenterProps> = ({
     setHasDrawn(false);
   };
 
-  // Handle Photo/Selfie capture
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle Photo capture from Frontal Camera
+  const handlePhotoCapture = async (compressedDataUrl: string) => {
+    setPhotoDataUrl(compressedDataUrl);
+    if (workerReferencePhoto) {
+      const result = await compareFaces(workerReferencePhoto, compressedDataUrl);
+      setBiometricResult(result);
+    } else {
+      setBiometricResult({
+        score: 100,
+        isMatch: true,
+        confidence: 'alta',
+        label: 'Foto pronta para registro biométrico',
+        color: 'emerald',
+        hasReference: false
+      });
+    }
+  };
+
+  // Quick Register Biometrics for current worker
+  const handleRegisterBiometrics = async () => {
+    if (!photoDataUrl || !selectedWorker) return;
+    const workerId = selectedWorker.id.startsWith('supervisor_') || selectedWorker.id.startsWith('watch_') ? null : selectedWorker.id;
+    if (!workerId) {
+      alert('Cadastro biométrico disponível para colaboradores registrados.');
+      return;
+    }
+
+    setIsRegisteringBiometrics(true);
+    try {
+      await api.post(`/employees/${workerId}/biometrics`, { photo_url: photoDataUrl });
+      setWorkerReferencePhoto(photoDataUrl);
+      const result = await compareFaces(photoDataUrl, photoDataUrl);
+      setBiometricResult(result);
+      alert(`Biometria facial de ${selectedWorker.name} cadastrada com sucesso como referência!`);
+    } catch (err: any) {
+      alert('Erro ao registrar biometria: ' + (err.message || 'Tente novamente'));
+    } finally {
+      setIsRegisteringBiometrics(false);
+    }
+  };
+
+  // Handle Photo/Selfie file fallback
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = () => {
-      setPhotoDataUrl(reader.result as string);
+    reader.onload = async () => {
+      const raw = reader.result as string;
+      await handlePhotoCapture(raw);
     };
     reader.readAsDataURL(file);
   };
@@ -340,48 +422,117 @@ export const SignatureModalCenter: React.FC<SignatureModalCenterProps> = ({
               </div>
             </div>
 
-            {/* Selfie / Photo Capture Section (Optional Verification) */}
-            <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                {photoDataUrl ? (
-                  <img
-                    src={photoDataUrl}
-                    alt="Foto do colaborador"
-                    className="w-12 h-12 rounded-xl object-cover border-2 border-emerald-500 shadow-sm"
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded-xl bg-slate-200 border border-slate-300 flex items-center justify-center text-slate-400">
-                    <Camera className="w-6 h-6" />
+            {/* Selfie / Biometrics Photo Section */}
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  {/* Photo comparison / preview */}
+                  <div className="flex items-center gap-2">
+                    {/* Reference photo (if registered) */}
+                    {workerReferencePhoto ? (
+                      <div className="relative" title="Foto Oficial do Cadastro">
+                        <img
+                          src={workerReferencePhoto}
+                          alt="Cadastro Oficial"
+                          className="w-14 h-14 rounded-2xl object-cover border-2 border-slate-300 shadow-sm"
+                        />
+                        <span className="absolute -bottom-1 -right-1 bg-slate-800 text-white text-[9px] px-1 py-0.2 rounded font-bold">
+                          Ref
+                        </span>
+                      </div>
+                    ) : null}
+
+                    {/* Captured Selfie */}
+                    {photoDataUrl ? (
+                      <div className="relative">
+                        <img
+                          src={photoDataUrl}
+                          alt="Foto capturada em campo"
+                          className={`w-14 h-14 rounded-2xl object-cover border-2 shadow-sm ${
+                            biometricResult?.isMatch ? 'border-emerald-500' : 'border-amber-500'
+                          }`}
+                        />
+                        <span className="absolute -bottom-1 -right-1 bg-emerald-600 text-white text-[9px] px-1 py-0.2 rounded font-bold">
+                          Campo
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="w-14 h-14 rounded-2xl bg-slate-200 border border-slate-300 flex items-center justify-center text-slate-400">
+                        <Camera className="w-6 h-6" />
+                      </div>
+                    )}
                   </div>
-                )}
-                <div>
-                  <h4 className="text-xs font-bold text-slate-800">
-                    {photoDataUrl ? 'Foto de Presença Capturada' : 'Foto de Presença em Campo (Opcional)'}
-                  </h4>
-                  <p className="text-[11px] text-slate-500">
-                    Comprova a presença física do colaborador no local de trabalho.
-                  </p>
+
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <span>Validação Facial Biométrica</span>
+                      {workerReferencePhoto && (
+                        <span className="text-[10px] px-1.5 py-0.2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded font-semibold">
+                          Biometria Ativa
+                        </span>
+                      )}
+                    </h4>
+                    <p className="text-[11px] text-slate-500">
+                      {photoDataUrl
+                        ? 'Selfie frontal registrada para confirmação de presença.'
+                        : 'Abra a câmera frontal para enquadrar o rosto do colaborador.'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="user"
+                    ref={fileInputRef}
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setCameraModalOpen(true)}
+                    className="py-2 px-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-md shadow-amber-500/20 active:scale-95 transition-all"
+                  >
+                    <Camera className="w-4 h-4 text-slate-950" />
+                    <span>{photoDataUrl ? 'Trocar Selfie Frontal' : 'Câmera Frontal'}</span>
+                  </button>
                 </div>
               </div>
 
-              <div>
-                <input
-                  type="file"
-                  accept="image/*"
-                  capture="user"
-                  ref={fileInputRef}
-                  onChange={handlePhotoUpload}
-                  className="hidden"
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="py-1.5 px-3 bg-white hover:bg-slate-100 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 flex items-center gap-1.5 shadow-sm transition-colors"
+              {/* Biometric Analysis Indicator */}
+              {biometricResult && (
+                <div
+                  className={`p-2.5 rounded-xl border flex items-center justify-between text-xs font-semibold ${
+                    biometricResult.color === 'emerald'
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                      : biometricResult.color === 'amber'
+                      ? 'bg-amber-50 border-amber-200 text-amber-800'
+                      : 'bg-rose-50 border-rose-200 text-rose-800'
+                  }`}
                 >
-                  <Camera className="w-3.5 h-3.5 text-amber-600" />
-                  {photoDataUrl ? 'Trocar Foto' : 'Tirar Foto'}
-                </button>
-              </div>
+                  <div className="flex items-center gap-2">
+                    {biometricResult.color === 'emerald' ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    ) : (
+                      <AlertTriangle className="w-4 h-4 shrink-0" />
+                    )}
+                    <span>{biometricResult.label}</span>
+                  </div>
+
+                  {photoDataUrl && !workerReferencePhoto && (
+                    <button
+                      type="button"
+                      onClick={handleRegisterBiometrics}
+                      disabled={isRegisteringBiometrics}
+                      className="py-1 px-2.5 bg-slate-900 hover:bg-slate-800 text-amber-300 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-colors"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                      <span>{isRegisteringBiometrics ? 'Gravando...' : 'Definir como Biometria Oficial'}</span>
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Action buttons */}
@@ -681,6 +832,14 @@ export const SignatureModalCenter: React.FC<SignatureModalCenterProps> = ({
             </div>
           </div>
         )}
+        {/* Frontal Camera Viewfinder Modal */}
+        <FrontalCameraModal
+          isOpen={cameraModalOpen}
+          onClose={() => setCameraModalOpen(false)}
+          onCapture={handlePhotoCapture}
+          workerName={selectedWorker?.name}
+          title="Biometria Facial na Homologação"
+        />
       </div>
     </div>
   );

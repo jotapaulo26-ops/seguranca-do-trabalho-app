@@ -265,12 +265,42 @@ documentRoutes.get('/', authenticateToken, requirePermission('documents', 'view'
 
   let enriched = docs.map(d => {
     const sigStatus = calculateSignatureStatus(d);
+    const includeImages = req.query.includeImages === 'true';
+
+    const lightSigStatus = includeImages ? sigStatus : {
+      ...sigStatus,
+      signedWorkers: sigStatus.signedWorkers.map(w => ({
+        id: w.id,
+        name: w.name,
+        role: w.role,
+        cpf: w.cpf,
+        type: w.type,
+        isSupervisor: w.isSupervisor,
+        signedAt: w.signedAt,
+        hasSignature: !!w.signatureDataUrl,
+        hasPhoto: !!w.photoDataUrl
+      }))
+    };
+
     return {
       ...d,
+      data: includeImages ? d.data : {
+        ...d.data,
+        signatures: (d.data?.signatures || []).map((s: any) => ({
+          id: s.id,
+          signerName: s.signerName,
+          signerRole: s.signerRole,
+          signerType: s.signerType,
+          signedAt: s.signedAt,
+          isSupervisor: s.isSupervisor,
+          hasSignature: !!s.signatureDataUrl,
+          hasPhoto: !!s.photoDataUrl
+        }))
+      },
       location_name: locations.find(l => l.id === d.location_id)?.name || null,
       employee_name: d.employee_id ? employees.find(e => e.id === d.employee_id)?.name : null,
       linked_apr_code: d.apr_id ? allDocs.find(a => a.id === d.apr_id)?.code : null,
-      signatureStatus: sigStatus
+      signatureStatus: lightSigStatus
     };
   });
 

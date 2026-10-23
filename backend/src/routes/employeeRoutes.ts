@@ -185,6 +185,27 @@ employeeRoutes.put('/:id', authenticateToken, requirePermission('employees', 'ed
   return res.json(updated);
 });
 
+// Update or Register Facial Biometrics
+employeeRoutes.post('/:id/biometrics', authenticateToken, (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { photo_url } = req.body;
+
+  if (!photo_url) {
+    return res.status(400).json({ error: 'A foto facial é obrigatória para o cadastro biométrico.' });
+  }
+
+  const emp = db.employees.findById(id);
+  if (!emp) return res.status(404).json({ error: 'Funcionário não encontrado.' });
+
+  const updated = db.employees.update(id, {
+    photo_url,
+    has_facial_biometrics: true
+  } as any);
+
+  logAudit(req, 'CADASTRO_BIOMETRICO', 'FUNCIONARIOS', `Biometria facial registrada para o colaborador ${emp.name}`);
+  return res.json({ message: 'Biometria facial cadastrada com sucesso!', employee: updated });
+});
+
 // Delete Employee
 employeeRoutes.delete('/:id', authenticateToken, requirePermission('employees', 'delete'), (req: Request, res: Response) => {
   const { id } = req.params;

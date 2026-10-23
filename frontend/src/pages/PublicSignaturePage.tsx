@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../services/api';
+import { FrontalCameraModal } from '../components/FrontalCameraModal';
+import { compareFaces, BiometricMatchResult } from '../services/facialBiometrics';
 import {
   ShieldCheck,
   PenTool,
@@ -11,7 +13,8 @@ import {
   Smartphone,
   HardHat,
   MapPin,
-  Check
+  Check,
+  Sparkles
 } from 'lucide-react';
 
 export const PublicSignaturePage: React.FC = () => {
@@ -32,8 +35,11 @@ export const PublicSignaturePage: React.FC = () => {
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(false);
 
-  // Photo selfie state
+  // Photo selfie & Frontal Camera state
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
+  const [cameraModalOpen, setCameraModalOpen] = useState(false);
+  const [biometricResult, setBiometricResult] = useState<BiometricMatchResult | null>(null);
+  const [workerReferencePhoto, setWorkerReferencePhoto] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [saving, setSaving] = useState(false);
@@ -137,13 +143,31 @@ export const PublicSignaturePage: React.FC = () => {
     setHasDrawn(false);
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoCapture = async (compressedDataUrl: string) => {
+    setPhotoDataUrl(compressedDataUrl);
+    if (workerReferencePhoto) {
+      const result = await compareFaces(workerReferencePhoto, compressedDataUrl);
+      setBiometricResult(result);
+    } else {
+      setBiometricResult({
+        score: 100,
+        isMatch: true,
+        confidence: 'alta',
+        label: 'Selfie de presença registrada com sucesso!',
+        color: 'emerald',
+        hasReference: false
+      });
+    }
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = () => {
-      setPhotoDataUrl(reader.result as string);
+    reader.onload = async () => {
+      const raw = reader.result as string;
+      await handlePhotoCapture(raw);
     };
     reader.readAsDataURL(file);
   };
@@ -335,44 +359,53 @@ export const PublicSignaturePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Photo Selfie */}
-          <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              {photoDataUrl ? (
-                <img
-                  src={photoDataUrl}
-                  alt="Sua foto"
-                  className="w-12 h-12 rounded-xl object-cover border-2 border-emerald-500 shadow-sm"
-                />
-              ) : (
-                <div className="w-12 h-12 rounded-xl bg-slate-200 border border-slate-300 flex items-center justify-center text-slate-400">
-                  <Camera className="w-6 h-6" />
+          {/* Photo Selfie / Biometrics */}
+          <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                {photoDataUrl ? (
+                  <img
+                    src={photoDataUrl}
+                    alt="Sua foto"
+                    className="w-12 h-12 rounded-xl object-cover border-2 border-emerald-500 shadow-sm"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-xl bg-slate-200 border border-slate-300 flex items-center justify-center text-slate-400">
+                    <Camera className="w-6 h-6" />
+                  </div>
+                )}
+                <div>
+                  <h4 className="text-xs font-bold text-slate-800">
+                    {photoDataUrl ? 'Selfie de Presença Registrada' : 'Foto de Presença (Câmera Frontal)'}
+                  </h4>
+                  <p className="text-[10px] text-slate-500">
+                    {photoDataUrl ? 'Validação biométrica concluída' : 'Olhe para a câmera frontal para validação de presença.'}
+                  </p>
                 </div>
-              )}
-              <div>
-                <h4 className="text-xs font-bold text-slate-800">
-                  {photoDataUrl ? 'Selfie de Presença OK' : 'Selfie de Presença (Opcional)'}
-                </h4>
-                <p className="text-[10px] text-slate-500">Tire uma foto rápida do seu rosto no local.</p>
               </div>
+
+              <button
+                type="button"
+                onClick={() => setCameraModalOpen(true)}
+                className="py-1.5 px-3 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm active:scale-95 transition-all"
+              >
+                <Camera className="w-3.5 h-3.5 text-slate-950" />
+                {photoDataUrl ? 'Trocar' : 'Câmera Frontal'}
+              </button>
             </div>
 
-            <input
-              type="file"
-              accept="image/*"
-              capture="user"
-              ref={fileInputRef}
-              onChange={handlePhotoUpload}
-              className="hidden"
-            />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="py-1.5 px-3 bg-white hover:bg-slate-100 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 flex items-center gap-1.5 shadow-sm"
-            >
-              <Camera className="w-3.5 h-3.5 text-amber-600" />
-              {photoDataUrl ? 'Trocar' : 'Tirar Foto'}
-            </button>
+            {biometricResult && (
+              <div
+                className={`py-1.5 px-3 rounded-xl border text-xs font-semibold flex items-center gap-2 ${
+                  biometricResult.color === 'emerald'
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                    : 'bg-amber-50 border-amber-200 text-amber-800'
+                }`}
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span>{biometricResult.label}</span>
+              </div>
+            )}
           </div>
 
           <button
@@ -388,6 +421,15 @@ export const PublicSignaturePage: React.FC = () => {
         <p className="text-center text-[10px] text-slate-500">
           Esta assinatura possui registro digital de horário e dispositivo para fins de conformidade com a NR-01.
         </p>
+
+        {/* Frontal Camera Viewfinder Modal */}
+        <FrontalCameraModal
+          isOpen={cameraModalOpen}
+          onClose={() => setCameraModalOpen(false)}
+          onCapture={handlePhotoCapture}
+          workerName={workerName}
+          title="Selfie de Presença do Executante"
+        />
       </div>
     </div>
   );

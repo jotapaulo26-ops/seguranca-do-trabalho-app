@@ -73,7 +73,9 @@ export const DocumentsPage: React.FC = () => {
 
   const handleDownloadPdf = async (doc: DocumentRecord) => {
     try {
-      await generateDocumentPdf(doc);
+      // Ensure we have full document data (with high-res signatures and photos)
+      const fullDoc = await api.get<DocumentRecord>(`/documents/${doc.id}`).catch(() => doc);
+      await generateDocumentPdf(fullDoc);
     } catch (err: any) {
       alert('Erro ao gerar PDF: ' + err.message);
     }
