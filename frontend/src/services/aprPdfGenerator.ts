@@ -76,7 +76,7 @@ export async function generateAprPdf(doc: DocumentRecord, companySettings?: any)
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(9);
   pdf.setTextColor(15, 23, 42);
-  pdf.text('🔍 RASTREABILIDADE E AUDITORIA DO DISPOSITIVO EMISSOR', margin + 4, currentY + 6);
+  pdf.text('RASTREABILIDADE E AUDITORIA DO DISPOSITIVO EMISSOR', margin + 4, currentY + 6);
 
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(8);
@@ -207,8 +207,8 @@ export async function generateAprPdf(doc: DocumentRecord, companySettings?: any)
   const hazardRows: any[] = [];
   for (let i = 0; i < maxRows; i++) {
     hazardRows.push([
-      `⚠️ ${hazards[i] || '—'}`,
-      `🛡️ ${measures[i] || '—'}`
+      `• ${hazards[i] || '—'}`,
+      `• ${measures[i] || '—'}`
     ]);
   }
 
@@ -257,12 +257,36 @@ export async function generateAprPdf(doc: DocumentRecord, companySettings?: any)
   currentY = (pdf as any).lastAutoTable.finalY + 6;
 
   // --- EPIs List ---
-  const requiredEpis: string[] = data.requiredEpis || ['Capacete c/ Jugular', 'Cinto Paraquedista', 'Talabarte Duplo Y', 'Botina de Segurança'];
+  const requiredEpis: string[] = data.requiredEpis || ['Capacete com Jugular', 'Cinto Tipo Paraquedista', 'Talabarte Duplo com Absorvedor de Energia', 'Botina de Segurança'];
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(8);
   pdf.setTextColor(71, 85, 105);
-  pdf.text(`EPIs Obrigatórios: ${requiredEpis.join(' | ')}`, margin, currentY);
-  currentY += 7;
+  pdf.text(`EPIs de Uso Obrigatório: ${requiredEpis.join(' • ')}`, margin, currentY);
+  currentY += 6;
+
+  // --- TERMO FORMAL DE DECLARAÇÃO, RESPONSABILIDADE E DIREITO DE RECUSA (NR-01 / NR-35) ---
+  if (currentY > pageHeight - 75) {
+    pdf.addPage();
+    currentY = 20;
+  }
+
+  pdf.setFillColor(248, 250, 252);
+  pdf.setDrawColor(203, 213, 225);
+  pdf.roundedRect(margin, currentY, pageWidth - (margin * 2), 17, 2, 2, 'FD');
+
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(7.5);
+  pdf.setTextColor(15, 23, 42);
+  pdf.text('TERMO DE CIÊNCIA, RESPONSABILIDADE OPERACIONAL E DIREITO DE RECUSA (NR-01, ITEM 1.4.3):', margin + 3, currentY + 4.5);
+
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(6.5);
+  pdf.setTextColor(71, 85, 105);
+  const legalText = 'Declaramos que fomos devidamente instruídos quanto aos riscos identificados nesta Análise Preliminar de Risco (APR) e às medidas de proteção coletivas e individuais obrigatórias. Comprometemo-nos a cumprir integralmente os procedimentos de segurança e a paralisar imediatamente as atividades no caso de constatação de qualquer condição de risco grave e iminente (Direito de Recusa — NR-01, item 1.4.3).';
+  const splitLegal = pdf.splitTextToSize(legalText, pageWidth - (margin * 2) - 6);
+  pdf.text(splitLegal, margin + 3, currentY + 8.5);
+
+  currentY += 21;
 
   // --- ASSINATURAS DIGITAIS REGISTRADAS ---
   if (currentY > pageHeight - 65) {

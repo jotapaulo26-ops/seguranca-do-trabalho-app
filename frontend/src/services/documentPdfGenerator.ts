@@ -61,7 +61,7 @@ function renderDeviceAuditBox(pdf: jsPDF, doc: DocumentRecord, startY: number): 
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(8.5);
   pdf.setTextColor(15, 23, 42);
-  pdf.text('🔍 RASTREABILIDADE DIGITAL E AUDITORIA DO DISPOSITIVO EMISSOR', margin + 4, startY + 5.5);
+  pdf.text('RASTREABILIDADE DIGITAL E AUDITORIA DO DISPOSITIVO EMISSOR', margin + 4, startY + 5.5);
 
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(7.5);
@@ -202,7 +202,7 @@ export async function generatePtPdf(doc: DocumentRecord, companySettings?: any):
     autoTable(pdf, {
       startY: currentY,
       margin: { left: margin, right: margin },
-      head: [['Horário', 'Oxigênio (O₂: 19.5-23%)', 'Inflamabilidade (LEL < 10%)', 'Monóxido Carbono (CO < 25ppm)', 'Gás Sulfídrico (H₂S < 8ppm)', 'Aferidor', 'Resultado']],
+      head: [['Horário', 'Oxigênio (O2: 19.5-23%)', 'Inflamabilidade (LEL < 10%)', 'Monóxido Carbono (CO < 25ppm)', 'Gás Sulfídrico (H2S < 8ppm)', 'Aferidor', 'Resultado']],
       body: gasRows,
       theme: 'grid',
       styles: { fontSize: 7.5, cellPadding: 2 },
@@ -233,7 +233,40 @@ export async function generatePtPdf(doc: DocumentRecord, companySettings?: any):
     body: measures.map((m: string) => [{ content: `[X] ${m}` }])
   });
 
-  currentY = (pdf as any).lastAutoTable.finalY + 6;
+  currentY = (pdf as any).lastAutoTable.finalY + 5;
+
+  // Termo de Responsabilidade e Liberação da PT / PET
+  const pageHeightPt = pdf.internal.pageSize.getHeight();
+  if (currentY > pageHeightPt - 75) {
+    pdf.addPage();
+    currentY = 20;
+  }
+
+  pdf.setFillColor(248, 250, 252);
+  pdf.setDrawColor(203, 213, 225);
+  pdf.roundedRect(margin, currentY, pageWidth - margin * 2, 16, 2, 2, 'FD');
+
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(7.5);
+  pdf.setTextColor(15, 23, 42);
+  pdf.text(
+    isPet
+      ? 'TERMO DE ENTRADA EM ESPAÇO CONFINADO E SEGURANÇA OPERACIONAL (NR-33):'
+      : 'TERMO DE LIBERAÇÃO, ENCERRAMENTO E SUSPENSÃO DA PERMISSÃO DE TRABALHO:',
+    margin + 3,
+    currentY + 4.5
+  );
+
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(6.5);
+  pdf.setTextColor(71, 85, 105);
+  const ptLegalText = isPet
+    ? 'Esta Permissão de Entrada e Trabalho (PET) é válida exclusivamente para o local e período aprovados. É obrigatória a presença contínua do Vigia na entrada externa e o monitoramento ininterrupto dos níveis atmosféricos. A entrada é imediatamente cancelada caso ocorra qualquer desvio nos gases ou alarme de evacuação.'
+    : 'Esta Permissão de Trabalho (PT) autoriza exclusivamente as atividades e equipe relacionadas. É obrigatório manter a área isolada, os bloqueios LOTO ativos e suspender imediatamente os serviços em caso de intempéries ou risco grave e iminente. Ao término, a frente deve ser inspecionada e deixada em condições seguras.';
+  const ptSplit = pdf.splitTextToSize(ptLegalText, pageWidth - margin * 2 - 6);
+  pdf.text(ptSplit, margin + 3, currentY + 8.5);
+
+  currentY += 20;
 
   // Section 5: Assinaturas Digitais
   renderSignaturesSection(pdf, data.signatures || [], currentY, [
@@ -371,16 +404,31 @@ export async function generateOsPdf(doc: DocumentRecord, companySettings?: any):
 
   currentY = (pdf as any).lastAutoTable.finalY + 4;
 
-  // Section 5: Termo de Ciência do Colaborador
-  pdf.setFillColor(248, 250, 252);
-  pdf.rect(margin, currentY, pageWidth - margin * 2, 12, 'F');
-  pdf.setFont('helvetica', 'italic');
-  pdf.setFontSize(7.5);
-  pdf.setTextColor(51, 65, 85);
-  const ack = data.acknowledgementText || 'Declaro ter recebido treinamento, orientações de segurança e uma cópia desta Ordem de Serviço.';
-  pdf.text(ack, margin + 2, currentY + 5, { maxWidth: pageWidth - margin * 2 - 4 });
+  // Section 5: Termo de Ciência e Compromisso do Colaborador (CLT Art. 158 / NR-01 item 1.4.2)
+  const pageHeightOs = pdf.internal.pageSize.getHeight();
+  if (currentY > pageHeightOs - 75) {
+    pdf.addPage();
+    currentY = 20;
+  }
 
-  currentY += 15;
+  pdf.setFillColor(248, 250, 252);
+  pdf.setDrawColor(203, 213, 225);
+  pdf.roundedRect(margin, currentY, pageWidth - margin * 2, 18, 2, 2, 'FD');
+
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(7.5);
+  pdf.setTextColor(15, 23, 42);
+  pdf.text('TERMO DE CIÊNCIA, TREINAMENTO E COMPROMISSO DO TRABALHADOR (CLT ART. 158 / NR-01 ITEM 1.4.2):', margin + 3, currentY + 4.5);
+
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(6.5);
+  pdf.setTextColor(71, 85, 105);
+  const ack = data.acknowledgementText ||
+    'Declaro, para os devidos fins, ter recebido da empresa o treinamento específico e uma via desta Ordem de Serviço de Segurança e Saúde no Trabalho. Comprometo-me a cumprir rigorosamente as normas de segurança, utilizar todos os EPIs fornecidos e zelar pela minha integridade física e de meus colegas, ciente de que o descumprimento injustificado constitui ato faltoso passível de punição disciplinar conforme o Art. 158 da CLT c/c Art. 482 da CLT.';
+  const ackSplit = pdf.splitTextToSize(ack, pageWidth - margin * 2 - 6);
+  pdf.text(ackSplit, margin + 3, currentY + 8.5);
+
+  currentY += 22;
 
   renderSignaturesSection(pdf, data.signatures || [], currentY, [
     { title: 'Responsável Técnico / Engenheiro de Segurança', name: doc.created_by_name },
@@ -471,21 +519,22 @@ export async function generateEpiReceiptPdf(doc: DocumentRecord, companySettings
   // Termo de Responsabilidade da NR-06
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(9);
-  pdf.text('3. TERMO DE COMPROMISSO E RESPONSABILIDADE (NR-06)', margin, currentY);
+  pdf.text('3. TERMO DE GUARDA, CONSERVAÇÃO E RESPONSABILIDADE POR EPI (NR-06, ITEM 6.6.1)', margin, currentY);
   currentY += 2;
 
   const term = data.termOfResponsibility ||
-    'Recebi da empresa os EPIs relacionados nesta ficha em perfeitas condições. Declaro-me ciente da obrigatoriedade do uso exclusivamente em serviço, da guarda e conservação e de comunicar imediatamente ao setor de SST qualquer avaria ou perda.';
+    'Declaro ter recebido da empresa, gratuitamente e em perfeito estado de conservação e funcionamento, os Equipamentos de Proteção Individual (EPI) constantes nesta ficha, devidamente higienizados e com os respectivos Certificados de Aprovação (C.A.) vigentes expedidos pelo Ministério do Trabalho e Emprego. Assumo o compromisso de utilizá-los estritamente durante a jornada de trabalho, zelar pela guarda e conservação, comunicar imediatamente qualquer alteração que os torne impróprios para uso e devolvê-los na rescisão contratual (NR-06 item 6.6.1 c/c CLT Art. 462, § 1º).';
 
   pdf.setFillColor(248, 250, 252);
-  pdf.setDrawColor(226, 232, 240);
-  pdf.roundedRect(margin, currentY, pageWidth - margin * 2, 24, 2, 2, 'FD');
+  pdf.setDrawColor(203, 213, 225);
+  pdf.roundedRect(margin, currentY, pageWidth - margin * 2, 22, 2, 2, 'FD');
   pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(7.5);
+  pdf.setFontSize(6.8);
   pdf.setTextColor(51, 65, 85);
-  pdf.text(term, margin + 3, currentY + 6, { maxWidth: pageWidth - margin * 2 - 6 });
+  const termSplit = pdf.splitTextToSize(term, pageWidth - margin * 2 - 6);
+  pdf.text(termSplit, margin + 3, currentY + 5.5);
 
-  currentY += 30;
+  currentY += 28;
 
   renderSignaturesSection(pdf, data.signatures || [], currentY, [
     { title: 'Responsável pela Entrega / SST', name: doc.created_by_name },
@@ -572,19 +621,21 @@ export async function generateChecklistPdf(doc: DocumentRecord, companySettings?
   const isApproved = data.isApproved !== false;
   pdf.setFillColor(isApproved ? 236 : 254, isApproved ? 253 : 242, isApproved ? 245 : 242);
   pdf.setDrawColor(isApproved ? 16 : 239, isApproved ? 185 : 68, isApproved ? 129 : 68);
-  pdf.roundedRect(margin, currentY, pageWidth - margin * 2, 16, 2, 2, 'FD');
+  pdf.roundedRect(margin, currentY, pageWidth - margin * 2, 22, 2, 2, 'FD');
 
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(10);
+  pdf.setFontSize(9.5);
   pdf.setTextColor(isApproved ? 16 : 220, isApproved ? 185 : 38, isApproved ? 129 : 38);
-  pdf.text(`PARECER FINAL: ${data.evaluationResult || (isApproved ? 'APTO PARA USO' : 'NÃO APTO / INTERDITADO')}`, margin + 4, currentY + 7);
+  pdf.text(`PARECER TÉCNICO FINAL: ${data.evaluationResult || (isApproved ? 'CONFORME / LIBERADO PARA OPERAÇÃO' : 'NÃO CONFORME / INTERDITADO')}`, margin + 4, currentY + 6);
 
   pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(8);
+  pdf.setFontSize(7.5);
   pdf.setTextColor(51, 65, 85);
-  pdf.text(`Observações: ${data.observations || 'Equipamento inspecionado conforme normas regulamentadoras.'}`, margin + 4, currentY + 12);
+  const chkObs = `Atesto que os itens inspecionados foram verificados em conformidade com as Normas Regulamentadoras vigentes. Observações: ${data.observations || 'Nenhuma anormalidade detectada no momento da vistoria pré-operacional.'}`;
+  const chkSplit = pdf.splitTextToSize(chkObs, pageWidth - margin * 2 - 8);
+  pdf.text(chkSplit, margin + 4, currentY + 11.5);
 
-  currentY += 22;
+  currentY += 28;
 
   renderSignaturesSection(pdf, data.signatures || [], currentY, [
     { title: 'Inspetor de Segurança / Técnico SST', name: data.inspectorName || doc.created_by_name },
