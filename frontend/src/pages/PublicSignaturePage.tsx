@@ -533,7 +533,7 @@ export const PublicSignaturePage: React.FC = () => {
           Esta assinatura possui registro digital de horário e dispositivo para fins de conformidade com a NR-01.
         </p>
 
-        {/* Frontal Camera Viewfinder Modal */}
+        {/* Frontal Camera Viewfinder Modal with Liveness Challenge */}
         <FrontalCameraModal
           isOpen={cameraModalOpen}
           onClose={() => setCameraModalOpen(false)}
@@ -541,6 +541,7 @@ export const PublicSignaturePage: React.FC = () => {
           workerName={workerName}
           referencePhotoUrl={workerReferencePhoto}
           title="Selfie de Presença do Executante"
+          requireLivenessChallenge={true}
         />
       </div>
     </div>

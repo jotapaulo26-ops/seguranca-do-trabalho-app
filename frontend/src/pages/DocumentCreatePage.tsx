@@ -1726,6 +1726,7 @@ export const DocumentCreatePage: React.FC = () => {
           workerName={user?.name}
           referencePhotoUrl={user?.photo_url}
           title="Reconhecimento Facial Obrigatório do Emissor"
+          requireLivenessChallenge={true}
         />
       )}
     </div>

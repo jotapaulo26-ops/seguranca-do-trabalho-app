@@ -955,7 +955,7 @@ export const SignatureModalCenter: React.FC<SignatureModalCenterProps> = ({
             </div>
           </div>
         )}
-        {/* Frontal Camera Viewfinder Modal */}
+        {/* Frontal Camera Viewfinder Modal with Liveness Challenge */}
         <FrontalCameraModal
           isOpen={cameraModalOpen}
           onClose={() => setCameraModalOpen(false)}
@@ -963,6 +963,7 @@ export const SignatureModalCenter: React.FC<SignatureModalCenterProps> = ({
           workerName={selectedWorker?.name}
           referencePhotoUrl={workerReferencePhoto}
           title="Biometria Facial na Homologação"
+          requireLivenessChallenge={true}
         />
       </div>
     </div>

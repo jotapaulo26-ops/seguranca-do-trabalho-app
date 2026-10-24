@@ -353,7 +353,8 @@ export async function generateAprPdf(doc: DocumentRecord, companySettings?: any)
               pdf.text('DIGITAL OK', x + 60, currentY + 24);
             } else {
               pdf.setTextColor(16, 149, 106);
-              pdf.text('FACE ID OK', x + 61, currentY + 24);
+              pdf.setFontSize(4.8);
+              pdf.text('FACE ID + LIVENESS OK', x + 56, currentY + 24);
             }
           } catch (e) {}
         }

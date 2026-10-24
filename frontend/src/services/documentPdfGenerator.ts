@@ -721,7 +721,7 @@ function renderSignaturesSection(
         pdf.text('HOMOLOGADO VIA DIGITAL DO APARELHO (CONTINGENCIA)', x + 3, startY + 30.5);
       } else if (matchingSig.photoDataUrl) {
         pdf.setTextColor(16, 149, 106); // Emerald
-        pdf.text('HOMOLOGADO COM BIOMETRIA FACIAL (FACE ID)', x + 3, startY + 30.5);
+        pdf.text('HOMOLOGADO COM FACE ID + PROVA DE VIDA (LIVENESS OK)', x + 3, startY + 30.5);
       }
     }
   });

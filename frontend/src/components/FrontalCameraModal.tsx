@@ -1,6 +1,12 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { Camera, RefreshCw, X, Check, AlertCircle, Scan, Sparkles, ShieldCheck, AlertTriangle, Fingerprint } from 'lucide-react';
-import { compareFaces, BiometricMatchResult, verifyLiveness } from '../services/facialBiometrics';
+import { Camera, RefreshCw, X, Check, AlertCircle, Scan, Sparkles, ShieldCheck, AlertTriangle, Fingerprint, Smile, Activity } from 'lucide-react';
+import { 
+  compareFaces, 
+  BiometricMatchResult, 
+  verifyLiveness, 
+  evaluateDynamicLiveness, 
+  DynamicLivenessType 
+} from '../services/facialBiometrics';
 import { authenticateWithDeviceBiometrics } from '../services/deviceBiometrics';
 import { api } from '../services/api';
 
@@ -11,6 +17,7 @@ interface FrontalCameraModalProps {
   title?: string;
   workerName?: string;
   referencePhotoUrl?: string | null;
+  requireLivenessChallenge?: boolean;
 }
 
 export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
@@ -19,7 +26,8 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
   onCapture,
   title = 'Captura de Presença Facial',
   workerName,
-  referencePhotoUrl
+  referencePhotoUrl,
+  requireLivenessChallenge = false
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -27,11 +35,21 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
   const isComparingRef = useRef(false);
   const hasMatchedRef = useRef(false);
   const prevPixelsRef = useRef<number[]>([]);
+  const baselinePixelsRef = useRef<number[]>([]);
+  const consecutiveMatchesRef = useRef<number>(0);
 
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
+
+  // Dynamic Liveness State
+  const [challengeType, setChallengeType] = useState<DynamicLivenessType>('smile');
+  const [livenessPassed, setLivenessPassed] = useState<boolean>(!requireLivenessChallenge);
+  const [livenessProgress, setLivenessProgress] = useState<number>(requireLivenessChallenge ? 0 : 100);
+  const [livenessHint, setLivenessHint] = useState<string>(
+    requireLivenessChallenge ? '😊 Dê um leve sorriso para comprovar presença viva' : 'Verificando presença...'
+  );
 
   // Auto Face ID state
   const isAutoMode = Boolean(referencePhotoUrl && referencePhotoUrl.length > 20);
@@ -64,6 +82,23 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
     } catch (e) {}
   };
 
+  // Intermediate liveness completion chime
+  const playLivenessTone = () => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(659.25, ctx.currentTime);
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.25);
+    } catch (e) {}
+  };
+
   // Divergence alert beep
   const playDivergenceBeep = () => {
     try {
@@ -92,7 +127,7 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
           snapshotPhotoUrl: snapshotUrl,
           lat,
           lng,
-          reason: 'Divergência facial detectada (rosto diferente do cadastro)'
+          reason: 'Divergência facial detectada (rosto diferente do cadastro ou liveness reprovado)'
         }).catch(() => {});
       };
 
@@ -138,6 +173,21 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
     hasMatchedRef.current = false;
     isComparingRef.current = false;
     prevPixelsRef.current = [];
+    baselinePixelsRef.current = [];
+    consecutiveMatchesRef.current = 0;
+    
+    // Reset liveness based on prop
+    const needsLiveness = requireLivenessChallenge;
+    setLivenessPassed(!needsLiveness);
+    setLivenessProgress(needsLiveness ? 0 : 100);
+    setLivenessHint(
+      needsLiveness 
+        ? challengeType === 'smile' 
+          ? '😊 Dê um leve sorriso para comprovar presença viva' 
+          : '↔️ Incline levemente a cabeça para validar'
+        : 'Verificando presença...'
+    );
+
     setAutoStatus('starting');
     setAutoMessage('Iniciando câmera...');
 
@@ -161,7 +211,7 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
           video.play().then(() => {
             setIsInitializing(false);
             setAutoStatus('scanning');
-            setAutoMessage('Reconhecimento Face ID ativo...');
+            setAutoMessage(needsLiveness ? 'Aguardando teste de vida...' : 'Reconhecimento Face ID ativo...');
           }).catch(() => {
             setIsInitializing(false);
             setAutoStatus('scanning');
@@ -190,7 +240,7 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
         setCameraError('Não foi possível acessar a câmera do dispositivo. Verifique as permissões de vídeo no navegador.');
       }
     }
-  }, [stopStream]);
+  }, [stopStream, requireLivenessChallenge, challengeType]);
 
   // Start on modal open, stop on close
   useEffect(() => {
@@ -212,7 +262,21 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
     }
   }, [isOpen, isInitializing]);
 
-  // Automatic Face ID scanning loop with Liveness & 2-attempt tracking
+  // Switch challenge type manually
+  const toggleChallengeType = () => {
+    const nextType: DynamicLivenessType = challengeType === 'smile' ? 'tilt' : 'smile';
+    setChallengeType(nextType);
+    setLivenessProgress(0);
+    setLivenessPassed(false);
+    baselinePixelsRef.current = [];
+    setLivenessHint(
+      nextType === 'smile' 
+        ? '😊 Dê um leve sorriso para comprovar presença viva' 
+        : '↔️ Incline levemente a cabeça para validar'
+    );
+  };
+
+  // High-Precision Face ID scanning loop with Dual-Layer Liveness & 2-Frame Consensus
   useEffect(() => {
     if (!isOpen || !isAutoMode || isInitializing || !!cameraError || !referencePhotoUrl) {
       return;
@@ -223,7 +287,8 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
     }
 
     const startTime = Date.now();
-    const TIMEOUT_MS = 8500; // 8.5s limit
+    // 11.5s timeout for dynamic liveness challenge; 8.5s for standard login
+    const TIMEOUT_MS = requireLivenessChallenge ? 12000 : 8500;
 
     scanIntervalRef.current = setInterval(async () => {
       const video = videoRef.current;
@@ -240,10 +305,7 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
           scanIntervalRef.current = null;
         }
         playDivergenceBeep();
-        setFailCount((prev) => {
-          const nextCount = prev + 1;
-          return nextCount;
-        });
+        setFailCount((prev) => prev + 1);
 
         // Capture snapshot of the failed face for audit log
         try {
@@ -264,7 +326,6 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
       }
 
       isComparingRef.current = true;
-      setAutoMessage('Escaneando feições e checando prova de vida...');
 
       try {
         const width = video.videoWidth || 640;
@@ -288,52 +349,101 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
 
           const liveDataUrl = canvas.toDataURL('image/jpeg', 0.85);
 
-          // Get image pixels for liveness validation
-          const imgData = ctx.getImageData(0, 0, 32, 32).data;
-          const currPixels: number[] = [];
+          // Amostragem em 64x64 px para alta resolução de feições
+          const analysisCanvas = document.createElement('canvas');
+          analysisCanvas.width = 64;
+          analysisCanvas.height = 64;
+          const aCtx = analysisCanvas.getContext('2d');
+          if (!aCtx) return;
+
+          aCtx.drawImage(canvas, 0, 0, 64, 64);
+          const imgData = aCtx.getImageData(0, 0, 64, 64).data;
+          const currPixels64: number[] = [];
           for (let p = 0; p < imgData.length; p += 4) {
-            currPixels.push(Math.round(0.299 * imgData[p] + 0.587 * imgData[p + 1] + 0.114 * imgData[p + 2]));
+            currPixels64.push(Math.round(0.299 * imgData[p] + 0.587 * imgData[p + 1] + 0.114 * imgData[p + 2]));
           }
 
-          // Anti-spoofing / Liveness Check
-          const liveness = verifyLiveness(prevPixelsRef.current, currPixels);
-          prevPixelsRef.current = currPixels;
+          // Inicializa frame base se ainda vazio
+          if (baselinePixelsRef.current.length === 0) {
+            baselinePixelsRef.current = [...currPixels64];
+          }
 
-          if (!liveness.isLive) {
+          // CAMADA 1: Prova de Vida Passiva Contínua (Anti-Foto Estática)
+          const passiveLiveness = verifyLiveness(prevPixelsRef.current, currPixels64);
+          prevPixelsRef.current = currPixels64;
+
+          if (!passiveLiveness.isLive) {
             setAutoMessage('Aviso: Movimente suavemente o rosto (Anti-Spoofing)');
             return;
           }
 
+          // CAMADA 2: Desafio Dinâmico Interativo (Sorriso ou Inclinação)
+          if (requireLivenessChallenge && !livenessPassed) {
+            const dynamicResult = evaluateDynamicLiveness(
+              challengeType,
+              baselinePixelsRef.current,
+              currPixels64,
+              64
+            );
+
+            setLivenessProgress(dynamicResult.progress);
+            setLivenessHint(dynamicResult.hint);
+
+            if (dynamicResult.passed) {
+              setLivenessPassed(true);
+              playLivenessTone();
+              setAutoMessage('Prova de vida OK! Verificando Face ID...');
+            } else {
+              setAutoMessage(dynamicResult.hint);
+              return; // Bloqueia comparação biométrica até que o desafio de vida seja concluído
+            }
+          }
+
+          // CAMADA 3: Comparação Facial Multizonal (Alta Precisão 65%)
           const result = await compareFaces(referencePhotoUrl, liveDataUrl);
 
-          // Threshold: score >= 58 is a match for the registered user
-          if (result.isMatch && result.score >= 58 && !hasMatchedRef.current) {
-            hasMatchedRef.current = true;
-            if (scanIntervalRef.current) {
-              clearInterval(scanIntervalRef.current);
-              scanIntervalRef.current = null;
+          // Consenso Multi-Frame: Requer 2 frames consecutivos válidos (>= 65%)
+          if (result.isMatch && result.score >= 65) {
+            consecutiveMatchesRef.current += 1;
+
+            if (consecutiveMatchesRef.current >= 2 && !hasMatchedRef.current) {
+              hasMatchedRef.current = true;
+              if (scanIntervalRef.current) {
+                clearInterval(scanIntervalRef.current);
+                scanIntervalRef.current = null;
+              }
+
+              setCapturedImage(liveDataUrl);
+              setMatchResult(result);
+              setAutoStatus('approved');
+              setAutoMessage(`✅ Face ID Confirmado (${result.score}%) + Prova de Vida OK`);
+              playSuccessChime();
+
+              setTimeout(() => {
+                stopStream();
+                onCapture(liveDataUrl, 'face');
+                onClose();
+              }, 700);
+              return;
+            } else {
+              setAutoMessage(`Face detectada (${result.score}%) — Confirmando consenso...`);
             }
-
-            setCapturedImage(liveDataUrl);
-            setMatchResult(result);
-            setAutoStatus('approved');
-            setAutoMessage(`Face ID Aprovado (${result.score}%)! Confirmando...`);
-            playSuccessChime();
-
-            setTimeout(() => {
-              stopStream();
-              onCapture(liveDataUrl, 'face');
-              onClose();
-            }, 650);
-            return;
+          } else {
+            // Se um frame falhar, reseta o consenso para evitar falsos positivos
+            consecutiveMatchesRef.current = 0;
+            if (result.score >= 55) {
+              setAutoMessage(`Alinhando... similaridade em ${result.score}% (Mínimo: 65%)`);
+            } else {
+              setAutoMessage('Aguardando alinhamento frontal do rosto...');
+            }
           }
         }
       } catch (err) {
-        // Continue scanning next tick
+        // Continuar tentando no próximo tick
       } finally {
         isComparingRef.current = false;
       }
-    }, 350);
+    }, 320);
 
     return () => {
       if (scanIntervalRef.current) {
@@ -341,7 +451,21 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
         scanIntervalRef.current = null;
       }
     };
-  }, [isOpen, isAutoMode, isInitializing, cameraError, referencePhotoUrl, autoStatus, facingMode, stopStream, onCapture, onClose]);
+  }, [
+    isOpen, 
+    isAutoMode, 
+    isInitializing, 
+    cameraError, 
+    referencePhotoUrl, 
+    autoStatus, 
+    facingMode, 
+    requireLivenessChallenge, 
+    livenessPassed, 
+    challengeType, 
+    stopStream, 
+    onCapture, 
+    onClose
+  ]);
 
   // Fallback: Trigger Device Biometrics (Fingerprint / WebAuthn)
   const handleDeviceFingerprint = async () => {
@@ -379,38 +503,44 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
     const video = videoRef.current;
     if (!video) return;
 
-    const width = video.videoWidth || 640;
-    const height = video.videoHeight || 480;
-    const size = Math.min(width, height);
-    const startX = (width - size) / 2;
-    const startY = (height - size) / 2;
+    try {
+      const width = video.videoWidth || 640;
+      const height = video.videoHeight || 480;
+      const size = Math.min(width, height);
+      const startX = (width - size) / 2;
+      const startY = (height - size) / 2;
 
-    const canvas = document.createElement('canvas');
-    const targetSize = 320;
-    canvas.width = targetSize;
-    canvas.height = targetSize;
+      const canvas = document.createElement('canvas');
+      const targetSize = 320;
+      canvas.width = targetSize;
+      canvas.height = targetSize;
+      const ctx = canvas.getContext('2d');
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+      if (!ctx) return;
 
-    if (facingMode === 'user') {
-      ctx.translate(targetSize, 0);
-      ctx.scale(-1, 1);
+      if (facingMode === 'user') {
+        ctx.translate(targetSize, 0);
+        ctx.scale(-1, 1);
+      }
+
+      ctx.drawImage(video, startX, startY, size, size, 0, 0, targetSize, targetSize);
+      const photoUrl = canvas.toDataURL('image/jpeg', 0.82);
+      setCapturedImage(photoUrl);
+    } catch (err) {
+      alert('Erro ao capturar foto. Tente novamente.');
     }
-
-    ctx.drawImage(video, startX, startY, size, size, 0, 0, targetSize, targetSize);
-    const compressedUrl = canvas.toDataURL('image/jpeg', 0.78);
-    setCapturedImage(compressedUrl);
-    stopStream();
   };
 
+  // Confirm manual photo
   const handleConfirm = () => {
     if (capturedImage) {
+      stopStream();
       onCapture(capturedImage, 'face');
       onClose();
     }
   };
 
+  // Retake photo
   const handleRetake = () => {
     setCapturedImage(null);
     startCamera(facingMode);
@@ -419,32 +549,23 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-slate-900 border border-slate-700/80 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col text-white">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="relative w-full max-w-sm bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+        <div className="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
           <div className="flex items-center gap-2.5">
-            <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold ${
-              isAutoMode ? 'bg-amber-500/20 text-amber-400' : 'bg-blue-500/20 text-blue-400'
-            }`}>
-              {isAutoMode ? <ShieldCheck className="w-4 h-4" /> : <Camera className="w-4 h-4" />}
+            <div className="p-2 bg-amber-500/10 rounded-xl border border-amber-500/20 text-amber-400">
+              <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <div className="flex items-center gap-1.5">
-                <h3 className="font-extrabold text-sm text-white">
-                  {isAutoMode ? 'Face ID Obrigatório' : title}
-                </h3>
-                {isAutoMode && (
-                  <span className="text-[10px] px-1.5 py-0.2 bg-amber-500/20 text-amber-300 font-bold rounded-md">
-                    Hands-free
-                  </span>
+              <h3 className="text-sm font-black text-white">{title}</h3>
+              <p className="text-[11px] text-slate-400 font-medium">
+                {workerName ? (
+                  <>Titular: <span className="text-amber-300 font-semibold">{workerName}</span></>
+                ) : (
+                  'Posicione o rosto no círculo'
                 )}
-              </div>
-              {workerName && (
-                <p className="text-[11px] text-amber-300 font-medium truncate max-w-[240px]">
-                  Colaborador: {workerName}
-                </p>
-              )}
+              </p>
             </div>
           </div>
           <button
@@ -452,28 +573,23 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
               stopStream();
               onClose();
             }}
-            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Viewfinder Area */}
-        <div className="p-4 flex flex-col items-center">
-          <div className={`relative w-72 h-72 rounded-2xl overflow-hidden bg-slate-950 border-2 shadow-inner flex items-center justify-center transition-colors duration-300 ${
-            isAutoMode && autoStatus === 'approved'
-              ? 'border-emerald-500 ring-4 ring-emerald-500/30'
-              : isAutoMode && autoStatus === 'timeout'
-              ? 'border-rose-500 ring-4 ring-rose-500/30'
-              : 'border-slate-700'
-          }`}>
+        <div className="relative p-5 flex flex-col items-center justify-center bg-slate-900/50">
+          <div className="relative w-64 h-64 rounded-3xl overflow-hidden bg-black shadow-inner border-2 border-slate-700/80 flex items-center justify-center">
             {cameraError ? (
-              <div className="p-6 text-center text-rose-300 flex flex-col items-center gap-3">
-                <AlertCircle className="w-10 h-10 text-rose-500" />
-                <p className="text-xs font-semibold">{cameraError}</p>
+              <div className="p-4 text-center flex flex-col items-center gap-2">
+                <AlertCircle className="w-8 h-8 text-rose-500" />
+                <p className="text-xs text-rose-300 font-medium">{cameraError}</p>
                 <button
+                  type="button"
                   onClick={() => startCamera(facingMode)}
-                  className="mt-2 py-2 px-4 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-bold text-white border border-slate-600"
+                  className="mt-2 py-1.5 px-3 bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 rounded-lg"
                 >
                   Tentar Novamente
                 </button>
@@ -486,11 +602,12 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
                   className="w-full h-full object-cover rounded-2xl"
                 />
                 {isAutoMode && autoStatus === 'approved' && (
-                  <div className="absolute inset-0 bg-emerald-950/60 backdrop-blur-[2px] flex flex-col items-center justify-center animate-in zoom-in-95">
+                  <div className="absolute inset-0 bg-emerald-950/70 backdrop-blur-[2px] flex flex-col items-center justify-center animate-in zoom-in-95">
                     <div className="w-14 h-14 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center shadow-lg shadow-emerald-500/50 mb-1">
                       <Check className="w-8 h-8 stroke-[3]" />
                     </div>
                     <span className="text-xs font-black text-white">BIOMETRIA HOMOLOGADA</span>
+                    <span className="text-[10px] text-emerald-200 font-mono mt-0.5">LIVENESS PASS 100%</span>
                   </div>
                 )}
               </div>
@@ -511,36 +628,79 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
                   </div>
                 )}
 
-                {/* Facial Framing Overlay */}
+                {/* Facial Framing Overlay with Dynamic Ring */}
                 {!isInitializing && (
                   <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                     <div className={`w-48 h-60 rounded-[50%] border-2 flex items-center justify-center transition-all ${
                       isAutoMode
-                        ? 'border-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.5)] animate-pulse'
+                        ? livenessPassed 
+                          ? 'border-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.6)] animate-pulse'
+                          : 'border-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.5)]'
                         : 'border-dashed border-amber-400/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]'
                     }`}>
                       {isAutoMode && autoStatus === 'scanning' && (
-                        <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-amber-400 to-transparent shadow-[0_0_12px_#f59e0b] animate-bounce"></div>
+                        <div className={`w-full h-0.5 bg-gradient-to-r from-transparent ${
+                          livenessPassed ? 'via-emerald-400' : 'via-amber-400'
+                        } to-transparent shadow-[0_0_12px_#f59e0b] animate-bounce`}></div>
                       )}
                     </div>
                   </div>
                 )}
 
+                {/* Timer Pill */}
                 {isAutoMode && !isInitializing && autoStatus === 'scanning' && (
                   <div className="absolute top-3 right-3 px-2 py-0.5 bg-black/60 backdrop-blur-sm rounded-full text-[10px] font-mono text-amber-300 font-bold border border-amber-500/40">
-                    {8 - scanSeconds}s
+                    {requireLivenessChallenge ? (12 - scanSeconds) : (8 - scanSeconds)}s
                   </div>
                 )}
               </>
             )}
           </div>
 
+          {/* DYNAMIC LIVENESS CHALLENGE BANNER */}
+          {requireLivenessChallenge && isAutoMode && autoStatus === 'scanning' && (
+            <div className="w-full mt-3 p-2.5 rounded-2xl bg-slate-950/70 border border-slate-800 flex flex-col gap-1.5 animate-in fade-in">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  {challengeType === 'smile' ? (
+                    <Smile className={`w-4 h-4 ${livenessPassed ? 'text-emerald-400' : 'text-amber-400 animate-bounce'}`} />
+                  ) : (
+                    <Activity className={`w-4 h-4 ${livenessPassed ? 'text-emerald-400' : 'text-amber-400 animate-pulse'}`} />
+                  )}
+                  <span className={`text-[11px] font-bold ${livenessPassed ? 'text-emerald-300' : 'text-amber-200'}`}>
+                    {livenessPassed ? '✅ Prova de Vida Aprovada!' : livenessHint}
+                  </span>
+                </div>
+                {!livenessPassed && (
+                  <button
+                    type="button"
+                    onClick={toggleChallengeType}
+                    title="Mudar tipo de desafio de vida"
+                    className="text-[9px] text-slate-400 hover:text-amber-300 underline font-semibold"
+                  >
+                    Alternar teste
+                  </button>
+                )}
+              </div>
+
+              {/* Animated Progress Bar */}
+              <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-200 ${
+                    livenessPassed ? 'bg-emerald-400' : 'bg-gradient-to-r from-amber-500 to-emerald-400'
+                  }`}
+                  style={{ width: `${livenessProgress}%` }}
+                />
+              </div>
+            </div>
+          )}
+
           {/* Dynamic Status / Instructions */}
           {isAutoMode ? (
-            <div className="mt-3 flex flex-col items-center text-center">
+            <div className="mt-2.5 flex flex-col items-center text-center">
               <div className="flex items-center gap-1.5 text-xs font-bold">
                 {autoStatus === 'scanning' && (
-                  <span className="flex items-center gap-1.5 text-amber-300">
+                  <span className={`flex items-center gap-1.5 ${livenessPassed ? 'text-emerald-300' : 'text-amber-300'}`}>
                     <Scan className="w-4 h-4 animate-pulse text-amber-400" />
                     {autoMessage}
                   </span>
@@ -560,7 +720,9 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
               </div>
               <p className="text-[11px] text-slate-400 mt-1 max-w-xs">
                 {autoStatus === 'scanning'
-                  ? 'Olhe para a câmera. O reconhecimento é 100% automático e valida no mesmo instante.'
+                  ? requireLivenessChallenge && !livenessPassed
+                    ? 'Execute o movimento solicitado para validar que você está ao vivo em frente à câmera.'
+                    : 'Mantenha o rosto alinhado. O Face ID valida com 2 quadros de confirmação.'
                   : autoStatus === 'timeout'
                   ? failCount >= 2
                     ? '2 falhas consecutivas: você pode tentar novamente ou assinar com a digital do aparelho abaixo.'
