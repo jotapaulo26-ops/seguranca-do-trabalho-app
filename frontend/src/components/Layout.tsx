@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { QRScannerModal } from './QRScannerModal';
 import { GeofenceAlertBanner } from './GeofenceAlertBanner';
+import { AdminIntrusionCallModal } from './AdminIntrusionCallModal';
 
 export const Layout: React.FC = () => {
   const { user, logout, can } = useAuth();
@@ -552,6 +553,9 @@ export const Layout: React.FC = () => {
 
       {/* Geofencing Proximity Alert Banner */}
       <GeofenceAlertBanner />
+
+      {/* Admin Quick Call Center for Geofence Intrusions */}
+      <AdminIntrusionCallModal />
     </div>
   );
 };

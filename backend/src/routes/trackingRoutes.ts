@@ -21,10 +21,36 @@ export interface ActiveUserLocation {
   lastSeenAt: string;
   lastSeenTimestamp: number;
   deviceId?: string;
+  hasActiveIntrusion?: boolean;
+}
+
+export interface ActiveIntrusionEvent {
+  id: string; // `${userId}_${riskId}`
+  userId: string;
+  userName: string;
+  userRole: string;
+  userPhone?: string;
+  userDepartment?: string;
+  photo_url?: string;
+  riskId: string;
+  riskName: string;
+  riskType: string;
+  distance: number;
+  radius: number;
+  timestamp: number;
+  timestampIso: string;
+  userLat: number;
+  userLng: number;
 }
 
 // In-memory registry of active online users (fast, high-frequency)
 const activeUsersMap = new Map<string, ActiveUserLocation>();
+
+// In-memory registry of active unauthorized geofence intrusions
+const activeIntrusionsMap = new Map<string, ActiveIntrusionEvent>();
+
+// In-memory queue of remote alarms triggered by supervisors targeting a specific user's phone
+const remoteAlarmsMap = new Map<string, { triggeredAt: number; riskName: string }>();
 
 // Haversine distance calculator in meters
 function calculateDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -155,10 +181,70 @@ trackingRoutes.post('/heartbeat', authenticateToken, (req: Request, res: Respons
     })
     .filter(Boolean);
 
+  // Check if there are unauthorized intrusions in geofences
+  const unauthorizedIntrusions = (nearbyRisks as any[]).filter(nr => nr && nr.isUnauthorizedIntrusion);
+
+  if (unauthorizedIntrusions.length > 0) {
+    locationEntry.hasActiveIntrusion = true;
+    unauthorizedIntrusions.forEach(nr => {
+      const intrusionId = `${req.user!.id}_${nr.id}`;
+      const entry: ActiveIntrusionEvent = {
+        id: intrusionId,
+        userId: req.user!.id,
+        userName: req.user!.name,
+        userRole: req.user!.roleName,
+        userPhone: matchedEmp?.phone || (db.users.findById(req.user!.id)?.phone),
+        userDepartment: matchedEmp?.department || 'Usina Santa Isabel',
+        photo_url: matchedEmp?.photo_url || (db.users.findById(req.user!.id)?.photo_url),
+        riskId: nr.id,
+        riskName: nr.name,
+        riskType: nr.risk_type,
+        distance: nr.distance,
+        radius: nr.radius,
+        timestamp: now,
+        timestampIso: new Date().toISOString(),
+        userLat: numLat,
+        userLng: numLng
+      };
+      activeIntrusionsMap.set(intrusionId, entry);
+
+      try {
+        if (db.geofence_events) {
+          db.geofence_events.insert({
+            user_id: req.user!.id,
+            user_name: req.user!.name,
+            risk_id: nr.id,
+            risk_name: nr.name,
+            event_type: 'intrusao_nao_autorizada',
+            timestamp: new Date().toISOString()
+          });
+        }
+      } catch (e) {}
+    });
+  } else {
+    locationEntry.hasActiveIntrusion = false;
+    for (const [key, val] of activeIntrusionsMap.entries()) {
+      if (val.userId === req.user!.id) {
+        activeIntrusionsMap.delete(key);
+      }
+    }
+  }
+
+  // Check if supervisor triggered a remote alarm for this user's phone
+  let remoteAlarm: { active: boolean; riskName?: string } | null = null;
+  if (remoteAlarmsMap.has(req.user.id)) {
+    const alarm = remoteAlarmsMap.get(req.user.id)!;
+    if (now - alarm.triggeredAt < 60000) {
+      remoteAlarm = { active: true, riskName: alarm.riskName };
+    }
+    remoteAlarmsMap.delete(req.user.id);
+  }
+
   return res.json({
     success: true,
     activeUsersCount: activeUsersMap.size,
-    nearbyRisks
+    nearbyRisks,
+    remoteAlarm
   });
 });
 
@@ -181,8 +267,10 @@ trackingRoutes.get('/active-users', authenticateToken, (req: Request, res: Respo
   // 2. Add all live online users first
   for (const [userId, userLoc] of activeUsersMap.entries()) {
     processedUserIds.add(userId);
+    const isIntruding = !!userLoc.hasActiveIntrusion || Array.from(activeIntrusionsMap.values()).some(i => i.userId === userId);
     result.push({
       ...userLoc,
+      hasActiveIntrusion: isIntruding,
       isOnline: true,
       isCurrentUser: userId === currentUserId
     });
@@ -243,6 +331,57 @@ trackingRoutes.get('/active-users', authenticateToken, (req: Request, res: Respo
 trackingRoutes.post('/offline', authenticateToken, (req: Request, res: Response) => {
   if (req.user?.id) {
     activeUsersMap.delete(req.user.id);
+    for (const [key, val] of activeIntrusionsMap.entries()) {
+      if (val.userId === req.user.id) {
+        activeIntrusionsMap.delete(key);
+      }
+    }
   }
   return res.json({ success: true, message: 'Usuário desconectado do rastreamento.' });
+});
+
+// 4. ACTIVE INTRUSIONS: Real-time list of unauthorized geofence breaches for Admin & SST
+trackingRoutes.get('/active-intrusions', authenticateToken, (req: Request, res: Response) => {
+  const now = Date.now();
+  // Cleanup intrusions that haven't been refreshed in 45 seconds
+  for (const [key, val] of activeIntrusionsMap.entries()) {
+    if (now - val.timestamp > 45000) {
+      activeIntrusionsMap.delete(key);
+    }
+  }
+  const intrusions = Array.from(activeIntrusionsMap.values());
+  return res.json(intrusions);
+});
+
+// 5. TRIGGER REMOTE ALARM: Supervisor commands user's phone to play siren and vibrate
+trackingRoutes.post('/trigger-remote-alarm', authenticateToken, (req: Request, res: Response) => {
+  const { userId, riskName } = req.body;
+  if (!userId) {
+    return res.status(400).json({ error: 'userId é obrigatório.' });
+  }
+
+  remoteAlarmsMap.set(userId, {
+    triggeredAt: Date.now(),
+    riskName: riskName || 'Área de Risco'
+  });
+
+  return res.json({
+    success: true,
+    message: 'Comando de sirene remota enviado com sucesso.'
+  });
+});
+
+// 6. RESOLVE INTRUSION: Clear/acknowledge intrusion event
+trackingRoutes.post('/resolve-intrusion', authenticateToken, (req: Request, res: Response) => {
+  const { intrusionId, userId } = req.body;
+  if (intrusionId) {
+    activeIntrusionsMap.delete(intrusionId);
+  } else if (userId) {
+    for (const [key, val] of activeIntrusionsMap.entries()) {
+      if (val.userId === userId) {
+        activeIntrusionsMap.delete(key);
+      }
+    }
+  }
+  return res.json({ success: true, message: 'Intrusão resolvida.' });
 });

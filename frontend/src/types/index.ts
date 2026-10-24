@@ -376,6 +376,26 @@ export interface ActiveUserLocation {
   lastSeenTimestamp: number;
   deviceId?: string;
   isCurrentUser?: boolean;
+  hasActiveIntrusion?: boolean;
+}
+
+export interface ActiveIntrusionEvent {
+  id: string;
+  userId: string;
+  userName: string;
+  userRole: string;
+  userPhone?: string;
+  userDepartment?: string;
+  photo_url?: string;
+  riskId: string;
+  riskName: string;
+  riskType: string;
+  distance: number;
+  radius: number;
+  timestamp: number;
+  timestampIso: string;
+  userLat: number;
+  userLng: number;
 }
 
 export interface NearbyRiskAlert {

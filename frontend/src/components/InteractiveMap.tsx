@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, Circle, useMapEvents, useMap } 
 import L from 'leaflet';
 import { RiskLocation, ActiveUserLocation } from '../types';
 import { useUserTracking } from '../context/TrackingContext';
-import { AlertTriangle, Shield, QrCode, FileText, Plus, MapPin, Layers, Navigation, Phone, Users, Flame } from 'lucide-react';
+import { AlertTriangle, Shield, QrCode, FileText, Plus, MapPin, Layers, Navigation, Phone, Users, Flame, MessageSquare, ShieldAlert } from 'lucide-react';
 
 // Distance calculation in meters
 function calculateDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -63,6 +63,26 @@ const currentUserIcon = L.divIcon({
 
 // Custom Icon for Teammates (Colored pill by role)
 function createTeammateIcon(user: ActiveUserLocation) {
+  if (user.hasActiveIntrusion) {
+    const firstName = user.name.split(' ')[0];
+    return L.divIcon({
+      className: 'custom-teammate-gps-marker',
+      html: `
+        <div class="flex flex-col items-center cursor-pointer transition-transform hover:scale-125 animate-pulse">
+          <div class="px-2.5 py-0.5 rounded-full text-[10px] font-black text-white bg-red-600 shadow-2xl border-2 border-white whitespace-nowrap flex items-center gap-1.5 ring-4 ring-red-500/60">
+            <span class="w-2 h-2 rounded-full bg-white animate-ping"></span>
+            <span>🚨</span>
+            <span>${firstName} (INTRUSO)</span>
+          </div>
+          <div class="w-3.5 h-3.5 rounded-full bg-red-600 border-2 border-white -mt-0.5 shadow-lg"></div>
+        </div>
+      `,
+      iconSize: [110, 38],
+      iconAnchor: [55, 34],
+      popupAnchor: [0, -28]
+    });
+  }
+
   let badgeColor = user.isOnline !== false ? 'bg-blue-600 border-blue-800' : 'bg-slate-700 border-slate-900';
   let roleIcon = '👷';
 
@@ -517,22 +537,47 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
                       </div>
                     </div>
 
+                    {tm.hasActiveIntrusion && (
+                      <div className="mb-2 p-2 rounded-xl bg-red-100 border border-red-300 text-red-900 text-[11px] font-bold leading-tight flex items-start gap-1.5 animate-pulse">
+                        <ShieldAlert className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                        <span>⚠️ Invasão de cerca detectada sem Permissão de Trabalho (PT)!</span>
+                      </div>
+                    )}
+
                     {distance !== null && tm.isOnline !== false && (
                       <div className="mb-2 text-xs font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded-lg">
                         📍 A {distance} metros de você
                       </div>
                     )}
 
-                    <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                      <span>{tm.isOnline !== false ? 'Tempo Real' : 'Posto Usina Santa Isabel'}</span>
+                    <div className="mt-2 pt-2 border-t border-slate-100 flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between text-[11px] text-slate-500">
+                        <span>{tm.isOnline !== false ? 'Tempo Real' : 'Posto Usina Santa Isabel'}</span>
+                        <span className="font-mono text-[10px] text-slate-400">{tm.phone || 'Sem fone'}</span>
+                      </div>
+
                       {tm.phone && (
-                        <a
-                          href={`tel:${tm.phone}`}
-                          className="flex items-center gap-1 text-emerald-700 font-bold bg-emerald-50 px-2 py-1 rounded-lg hover:bg-emerald-100"
-                        >
-                          <Phone className="w-3 h-3" />
-                          Ligar
-                        </a>
+                        <div className="grid grid-cols-2 gap-1.5 mt-1">
+                          <a
+                            href={`tel:${tm.phone.replace(/\D/g, '')}`}
+                            className="flex items-center justify-center gap-1 text-white font-bold bg-emerald-600 px-2 py-1.5 rounded-lg hover:bg-emerald-500 text-xs shadow-sm"
+                            title="Ligar diretamente pelo computador"
+                          >
+                            <Phone className="w-3.5 h-3.5 text-white" />
+                            Ligar
+                          </a>
+
+                          <a
+                            href={`https://wa.me/55${tm.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`🚨 ALERTA SST: Olá ${tm.name}, você foi detectado em área de risco da cerca virtual sem PT válida. Evacue a área imediatamente!`)}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center justify-center gap-1 text-white font-bold bg-teal-600 px-2 py-1.5 rounded-lg hover:bg-teal-500 text-xs shadow-sm"
+                            title="Chamar no WhatsApp"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5 text-white" />
+                            WhatsApp
+                          </a>
+                        </div>
                       )}
                     </div>
                   </div>

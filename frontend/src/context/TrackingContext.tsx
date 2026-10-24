@@ -21,6 +21,8 @@ interface TrackingContextType {
   activeProximityAlert: NearbyRiskAlert | null;
   dismissProximityAlert: () => void;
   requestGpsPermission: () => void;
+  remoteSupervisorAlarm: { active: boolean; riskName: string } | null;
+  dismissRemoteSupervisorAlarm: () => void;
 }
 
 const TrackingContext = createContext<TrackingContextType | undefined>(undefined);
@@ -52,6 +54,38 @@ function playProximityWarningSound() {
   }
 }
 
+// Emergency oscillating siren when supervisor triggers remote alarm on phone
+function playRemoteEmergencySiren() {
+  try {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'sawtooth';
+    const now = ctx.currentTime;
+    for (let i = 0; i < 6; i++) {
+      osc.frequency.setValueAtTime(880, now + i * 0.4);
+      osc.frequency.setValueAtTime(440, now + i * 0.4 + 0.2);
+    }
+
+    gain.gain.setValueAtTime(0.45, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 2.5);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 2.5);
+  } catch (err) {}
+
+  if (typeof navigator !== 'undefined' && navigator.vibrate) {
+    try {
+      navigator.vibrate([800, 300, 800, 300, 1500]);
+    } catch (e) {}
+  }
+}
+
 export const TrackingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [myLocation, setMyLocation] = useState<MyGPSLocation | null>(null);
@@ -60,6 +94,7 @@ export const TrackingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [isTracking, setIsTracking] = useState(false);
   const [nearbyRisks, setNearbyRisks] = useState<NearbyRiskAlert[]>([]);
   const [activeProximityAlert, setActiveProximityAlert] = useState<NearbyRiskAlert | null>(null);
+  const [remoteSupervisorAlarm, setRemoteSupervisorAlarm] = useState<{ active: boolean; riskName: string } | null>(null);
 
   const dismissedRisksRef = useRef<Set<string>>(new Set());
   const watchIdRef = useRef<number | null>(null);
@@ -81,13 +116,25 @@ export const TrackingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const sendHeartbeat = async (loc: MyGPSLocation) => {
     if (!user) return;
     try {
-      const res = await api.post<{ success: boolean; nearbyRisks: NearbyRiskAlert[] }>('/tracking/heartbeat', {
+      const res = await api.post<{ 
+        success: boolean; 
+        nearbyRisks: NearbyRiskAlert[];
+        remoteAlarm?: { active: boolean; riskName?: string } | null;
+      }>('/tracking/heartbeat', {
         lat: loc.lat,
         lng: loc.lng,
         accuracy: loc.accuracy,
         heading: loc.heading,
         speed: loc.speed
       });
+
+      if (res && res.remoteAlarm && res.remoteAlarm.active) {
+        playRemoteEmergencySiren();
+        setRemoteSupervisorAlarm({
+          active: true,
+          riskName: res.remoteAlarm.riskName || 'Área de Risco'
+        });
+      }
 
       if (res && res.nearbyRisks) {
         setNearbyRisks(res.nearbyRisks);
@@ -229,7 +276,9 @@ export const TrackingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         nearbyRisks,
         activeProximityAlert,
         dismissProximityAlert,
-        requestGpsPermission: startWatchingLocation
+        requestGpsPermission: startWatchingLocation,
+        remoteSupervisorAlarm,
+        dismissRemoteSupervisorAlarm: () => setRemoteSupervisorAlarm(null)
       }}
     >
       {children}
