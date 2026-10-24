@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { ShieldCheck, AlertTriangle, RefreshCw, X, Check, Sparkles, Scan } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, RefreshCw, X, Check, Sparkles, Scan, Lightbulb } from 'lucide-react';
 import { compareFaces, BiometricMatchResult } from '../services/facialBiometrics';
 
 interface BiometricLoginModalProps {
@@ -33,6 +33,9 @@ export const BiometricLoginModal: React.FC<BiometricLoginModalProps> = ({
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const [authFailed, setAuthFailed] = useState<string | null>(null);
   const [scanSeconds, setScanSeconds] = useState(0);
+
+  // Screen Flash Ring Light (defaults to TRUE to illuminate operator's face with full-screen pure white)
+  const [screenFlash, setScreenFlash] = useState(true);
 
   // Play pleasant harmonic ascending chime on Face ID approval
   const playSuccessChime = () => {
@@ -76,6 +79,21 @@ export const BiometricLoginModal: React.FC<BiometricLoginModalProps> = ({
     }
   };
 
+  // Keep screen bright & awake via Screen Wake Lock API
+  useEffect(() => {
+    let wakeLockSentinel: any = null;
+    if (isOpen && typeof navigator !== 'undefined' && 'wakeLock' in navigator && (navigator as any).wakeLock) {
+      (navigator as any).wakeLock.request('screen').then((lock: any) => {
+        wakeLockSentinel = lock;
+      }).catch(() => {});
+    }
+    return () => {
+      if (wakeLockSentinel) {
+        wakeLockSentinel.release().catch(() => {});
+      }
+    };
+  }, [isOpen]);
+
   const stopStream = useCallback(() => {
     if (scanIntervalRef.current) {
       clearInterval(scanIntervalRef.current);
@@ -103,7 +121,7 @@ export const BiometricLoginModal: React.FC<BiometricLoginModalProps> = ({
         video.play().then(() => {
           setIsInitializing(false);
           setScanStatus('scanning');
-          setStatusMessage('Posicione o rosto: Reconhecimento Face ID ativo...');
+          setStatusMessage('Posicione o rosto no círculo central...');
         }).catch(() => {
           setIsInitializing(false);
           setScanStatus('scanning');
@@ -160,7 +178,7 @@ export const BiometricLoginModal: React.FC<BiometricLoginModalProps> = ({
     };
   }, [isOpen, startCamera, stopStream]);
 
-  // Keep stream alive if video element attaches late
+  // Keep stream wired if element was late
   useEffect(() => {
     if (isOpen && streamRef.current && videoRef.current && !videoRef.current.srcObject) {
       videoRef.current.srcObject = streamRef.current;
@@ -168,7 +186,7 @@ export const BiometricLoginModal: React.FC<BiometricLoginModalProps> = ({
     }
   }, [isOpen, isInitializing]);
 
-  // Automatic Face ID continuous scanning loop
+  // Automatic Face ID scanning loop
   useEffect(() => {
     if (!isOpen || isInitializing || !!cameraError || !referencePhotoUrl) {
       return;
@@ -190,7 +208,6 @@ export const BiometricLoginModal: React.FC<BiometricLoginModalProps> = ({
       const elapsed = Date.now() - startTime;
       setScanSeconds(Math.floor(elapsed / 1000));
 
-      // Timeout reached: stop scanning and request retry
       if (elapsed >= TIMEOUT_MS) {
         if (scanIntervalRef.current) {
           clearInterval(scanIntervalRef.current);
@@ -198,14 +215,15 @@ export const BiometricLoginModal: React.FC<BiometricLoginModalProps> = ({
         }
         playDivergenceBeep();
         setScanStatus('timeout');
-        setAuthFailed('Rosto não reconhecido ou iluminação insuficiente. Posicione seu rosto de frente para a câmera e tente novamente.');
-        if (onFailure) onFailure('Tempo esgotado na validação biométrica.');
+        setStatusMessage('Rosto divergente do titular cadastrado.');
+        setAuthFailed('A similaridade biométrica não atingiu a margem de segurança. Ajuste a posição do rosto e tente novamente.');
+        if (onFailure) {
+          onFailure('Rosto divergente da biometria cadastrada. Acesso não autorizado.');
+        }
         return;
       }
 
-      // Capture frame to offscreen canvas
       isComparingRef.current = true;
-      setStatusMessage('Escaneando feições em tempo real...');
 
       try {
         const width = video.videoWidth || 640;
@@ -221,7 +239,6 @@ export const BiometricLoginModal: React.FC<BiometricLoginModalProps> = ({
         const ctx = canvas.getContext('2d');
 
         if (ctx) {
-          // Mirroring frontal camera
           ctx.translate(targetSize, 0);
           ctx.scale(-1, 1);
           ctx.drawImage(video, startX, startY, size, size, 0, 0, targetSize, targetSize);
@@ -229,8 +246,7 @@ export const BiometricLoginModal: React.FC<BiometricLoginModalProps> = ({
           const liveDataUrl = canvas.toDataURL('image/jpeg', 0.85);
           const result = await compareFaces(referencePhotoUrl, liveDataUrl);
 
-          // Threshold: score >= 58 is a match for the registered user
-          if (result.isMatch && result.score >= 58 && !hasMatchedRef.current) {
+          if (result.isMatch && result.score >= 60 && !hasMatchedRef.current) {
             hasMatchedRef.current = true;
             if (scanIntervalRef.current) {
               clearInterval(scanIntervalRef.current);
@@ -255,7 +271,7 @@ export const BiometricLoginModal: React.FC<BiometricLoginModalProps> = ({
       } finally {
         isComparingRef.current = false;
       }
-    }, 350); // Scans every 350ms
+    }, 350);
 
     return () => {
       if (scanIntervalRef.current) {
@@ -268,184 +284,220 @@ export const BiometricLoginModal: React.FC<BiometricLoginModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100000] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-slate-900 border border-slate-700/80 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col text-white">
-        {/* Header */}
-        <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold transition-colors ${
-              scanStatus === 'approved'
-                ? 'bg-emerald-500/20 text-emerald-400'
-                : scanStatus === 'timeout'
-                ? 'bg-rose-500/20 text-rose-400'
-                : 'bg-amber-500/20 text-amber-400'
-            }`}>
-              <ShieldCheck className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <h3 className="font-extrabold text-sm text-white">Face ID Automático</h3>
-                <span className="text-[10px] px-1.5 py-0.2 bg-amber-500/20 text-amber-300 font-bold rounded-md">
-                  Hands-free
-                </span>
-              </div>
-              <p className="text-[11px] text-amber-300 font-medium truncate max-w-[240px]">Colaborador: {userName}</p>
-            </div>
+    <div
+      className={`fixed inset-0 z-[100000] flex flex-col items-center justify-between p-4 sm:p-6 transition-colors duration-300 animate-in fade-in select-none ${
+        screenFlash ? 'bg-white text-slate-950' : 'bg-slate-950/95 text-white backdrop-blur-md'
+      }`}
+    >
+      {/* Top Header Controls */}
+      <div className="w-full max-w-lg flex items-center justify-between pt-1">
+        <div className="flex items-center gap-2.5">
+          <div
+            className={`w-9 h-9 rounded-2xl flex items-center justify-center font-bold shadow-md transition-colors ${
+              screenFlash
+                ? 'bg-amber-500 text-slate-950 border border-amber-400'
+                : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+            }`}
+          >
+            <ShieldCheck className="w-5 h-5" />
           </div>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <h3 className={`font-black text-sm tracking-tight ${screenFlash ? 'text-slate-950' : 'text-white'}`}>
+                Face ID Automático
+              </h3>
+              <span
+                className={`text-[10px] px-2 py-0.5 font-bold rounded-md uppercase font-mono ${
+                  screenFlash
+                    ? 'bg-amber-100 text-amber-950 border border-amber-300'
+                    : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                }`}
+              >
+                Hands-free
+              </span>
+            </div>
+            <p className={`text-xs font-semibold truncate max-w-[220px] ${screenFlash ? 'text-slate-700' : 'text-amber-300'}`}>
+              Titular: {userName}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Toggle Screen Flash Ring Light */}
           <button
+            type="button"
+            onClick={() => setScreenFlash(!screenFlash)}
+            title={screenFlash ? 'Desativar flash de tela branca' : 'Ativar flash de tela branca para iluminar o rosto'}
+            className={`p-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all active:scale-95 border ${
+              screenFlash
+                ? 'bg-amber-100 text-amber-950 border-amber-300 hover:bg-amber-200'
+                : 'bg-slate-800 text-slate-300 border-slate-700 hover:text-white'
+            }`}
+          >
+            <Lightbulb className={`w-4 h-4 ${screenFlash ? 'text-amber-600 fill-amber-400' : 'text-slate-400'}`} />
+            <span className="hidden sm:inline text-[11px] font-black">
+              {screenFlash ? 'Flash Ring Light ON' : 'Flash OFF'}
+            </span>
+          </button>
+
+          {/* Close Modal */}
+          <button
+            type="button"
             onClick={() => {
               stopStream();
               onClose();
             }}
-            className="p-1.5 text-slate-400 hover:text-white rounded-full hover:bg-slate-800 transition-colors"
+            className={`p-2 rounded-xl transition-colors ${
+              screenFlash ? 'text-slate-600 hover:text-slate-950 hover:bg-slate-100' : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            }`}
           >
             <X className="w-5 h-5" />
           </button>
         </div>
+      </div>
 
-        {/* Camera Viewfinder */}
-        <div className="p-5 flex flex-col items-center">
-          {cameraError ? (
-            <div className="w-full p-4 rounded-2xl bg-red-950/40 border border-red-800/80 text-red-300 text-xs flex items-start gap-2.5 my-4">
-              <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-bold">Acesso à câmera indisponível</p>
-                <p className="text-[11px] mt-1 text-slate-300">{cameraError}</p>
-                <button
-                  onClick={startCamera}
-                  className="mt-3 px-3 py-1.5 bg-red-800 hover:bg-red-700 text-white rounded-lg font-bold text-[11px] flex items-center gap-1.5"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" /> Tentar Novamente
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="relative my-2 flex items-center justify-center">
-              {/* Outer Pulsing Radar Ring */}
-              <div
-                className={`absolute -inset-3 rounded-full transition-all duration-300 pointer-events-none ${
-                  scanStatus === 'approved'
-                    ? 'border-4 border-emerald-400 shadow-[0_0_25px_rgba(52,211,153,0.6)] animate-pulse'
-                    : scanStatus === 'timeout'
-                    ? 'border-4 border-rose-500/80 shadow-[0_0_20px_rgba(244,63,94,0.4)]'
-                    : 'border-2 border-dashed border-amber-400/80 animate-[spin_6s_linear_infinite]'
+      {/* Central Viewfinder Circle with Ring Light */}
+      <div className="relative my-auto flex flex-col items-center justify-center">
+        {cameraError ? (
+          <div className="w-full max-w-sm p-5 rounded-3xl bg-red-50 border-2 border-red-300 text-red-900 text-xs flex flex-col items-center text-center gap-2 shadow-xl">
+            <AlertTriangle className="w-8 h-8 text-red-600" />
+            <p className="font-extrabold text-sm">Câmera indisponível</p>
+            <p className="text-[11px] text-red-800">{cameraError}</p>
+            <button
+              onClick={startCamera}
+              className="mt-3 px-4 py-2 bg-red-800 hover:bg-red-700 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-md"
+            >
+              <RefreshCw className="w-4 h-4" /> Tentar Novamente
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* Pulsing Aura */}
+            <div
+              className={`absolute -inset-4 sm:-inset-6 rounded-full transition-all duration-300 pointer-events-none ${
+                scanStatus === 'approved'
+                  ? 'border-4 border-emerald-500 shadow-[0_0_60px_rgba(16,185,129,0.9)] animate-pulse'
+                  : scanStatus === 'timeout'
+                  ? 'border-4 border-rose-600 shadow-[0_0_50px_rgba(225,29,72,0.8)]'
+                  : screenFlash
+                  ? 'border-4 border-amber-400 shadow-[0_0_60px_rgba(245,158,11,0.6)] animate-pulse'
+                  : 'border-2 border-dashed border-amber-400/80 animate-[spin_6s_linear_infinite]'
+              }`}
+            />
+
+            {/* Circular Viewfinder Window (Only area to see face) */}
+            <div
+              className={`relative w-72 h-72 sm:w-84 sm:h-84 rounded-full overflow-hidden border-4 shadow-2xl bg-black flex items-center justify-center transition-all duration-300 ${
+                scanStatus === 'approved'
+                  ? 'border-emerald-500 ring-8 ring-emerald-500/40 shadow-[0_0_70px_rgba(16,185,129,0.8)]'
+                  : scanStatus === 'timeout'
+                  ? 'border-rose-600 ring-8 ring-rose-500/40 shadow-[0_0_60px_rgba(225,29,72,0.7)]'
+                  : 'border-slate-950 ring-4 ring-amber-400/50 shadow-[0_0_50px_rgba(0,0,0,0.35)]'
+              }`}
+            >
+              {/* Permanent Video Element in DOM */}
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className={`w-full h-full object-cover transform scale-x-[-1] ${
+                  capturedPhoto ? 'hidden' : 'block'
                 }`}
               />
 
-              {/* Viewfinder Circle */}
-              <div className={`relative w-64 h-64 rounded-full overflow-hidden border-4 shadow-2xl bg-black flex items-center justify-center transition-colors duration-300 ${
-                scanStatus === 'approved'
-                  ? 'border-emerald-500 ring-4 ring-emerald-500/30'
-                  : scanStatus === 'timeout'
-                  ? 'border-rose-500 ring-4 ring-rose-500/30'
-                  : 'border-amber-500'
-              }`}>
-                {/* Permanent Video Element in DOM to ensure tracks are always wired */}
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className={`w-full h-full object-cover transform scale-x-[-1] ${
-                    capturedPhoto ? 'hidden' : 'block'
-                  }`}
+              {/* If snapshot captured */}
+              {capturedPhoto && (
+                <img
+                  src={capturedPhoto}
+                  alt="Foto Capturada"
+                  className="absolute inset-0 w-full h-full object-cover"
                 />
+              )}
 
-                {/* If snapshot captured and analyzing or result shown */}
-                {capturedPhoto && (
-                  <img
-                    src={capturedPhoto}
-                    alt="Foto Capturada"
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                )}
+              {/* Loading Spinner */}
+              {isInitializing && !capturedPhoto && (
+                <div className="absolute inset-0 bg-slate-950 flex flex-col items-center justify-center gap-2 text-slate-200 text-xs">
+                  <RefreshCw className="w-8 h-8 animate-spin text-amber-500" />
+                  <span className="font-bold">Iniciando câmera...</span>
+                </div>
+              )}
 
-                {/* Loading Spinner Overlay while camera starts */}
-                {isInitializing && !capturedPhoto && (
-                  <div className="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center gap-2 text-slate-300 text-xs">
-                    <RefreshCw className="w-7 h-7 animate-spin text-amber-500" />
-                    <span className="font-semibold">Iniciando Face ID...</span>
+              {/* Active Facial Scanning Radar Laser Line */}
+              {!isInitializing && !capturedPhoto && scanStatus === 'scanning' && (
+                <>
+                  <div className="absolute inset-0 border-2 border-amber-400/40 rounded-full pointer-events-none"></div>
+                  <div className="absolute left-6 right-6 h-1 bg-gradient-to-r from-transparent via-amber-400 to-transparent shadow-[0_0_20px_#f59e0b] pointer-events-none animate-bounce"></div>
+                  <div className="absolute top-4 px-3 py-1 bg-slate-950/80 backdrop-blur-md rounded-full text-xs font-mono text-amber-300 font-black border border-amber-500/50 shadow-lg">
+                    {8 - scanSeconds}s
                   </div>
-                )}
+                </>
+              )}
 
-                {/* Active Facial Scanning Radar Laser Line */}
-                {!isInitializing && !capturedPhoto && scanStatus === 'scanning' && (
-                  <>
-                    <div className="absolute inset-0 border border-amber-400/30 rounded-full pointer-events-none"></div>
-                    <div className="absolute left-4 right-4 h-0.5 bg-gradient-to-r from-transparent via-amber-400 to-transparent shadow-[0_0_15px_#f59e0b] pointer-events-none animate-bounce"></div>
-                    <div className="absolute top-3 right-4 px-2 py-0.5 bg-black/60 backdrop-blur-sm rounded-full text-[10px] font-mono text-amber-300 font-bold border border-amber-500/40">
-                      {8 - scanSeconds}s
-                    </div>
-                  </>
-                )}
-
-                {/* Approved Success Overlay Icon */}
-                {scanStatus === 'approved' && (
-                  <div className="absolute inset-0 bg-emerald-950/60 backdrop-blur-[2px] flex flex-col items-center justify-center animate-in zoom-in-95 duration-200">
-                    <div className="w-14 h-14 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center shadow-lg shadow-emerald-500/50 mb-1">
-                      <Check className="w-8 h-8 stroke-[3]" />
-                    </div>
-                    <span className="text-xs font-black text-white">RECONHECIDO</span>
+              {/* Approved Success Overlay Icon */}
+              {scanStatus === 'approved' && (
+                <div className="absolute inset-0 bg-emerald-950/70 backdrop-blur-[2px] flex flex-col items-center justify-center animate-in zoom-in-95 duration-200">
+                  <div className="w-16 h-16 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center shadow-xl shadow-emerald-500/60 mb-2">
+                    <Check className="w-10 h-10 stroke-[3]" />
                   </div>
-                )}
-              </div>
+                  <span className="text-sm font-black text-white tracking-wide">RECONHECIDO</span>
+                </div>
+              )}
             </div>
+          </>
+        )}
+      </div>
+
+      {/* Bottom Status & Instructions */}
+      <div className="w-full max-w-md flex flex-col items-center text-center pb-3">
+        <div className="flex items-center justify-center gap-2 text-sm font-extrabold mb-1">
+          {scanStatus === 'scanning' && (
+            <span className={`flex items-center gap-2 ${screenFlash ? 'text-amber-800' : 'text-amber-300'}`}>
+              <Scan className="w-4 h-4 animate-pulse text-amber-500" />
+              {statusMessage}
+            </span>
           )}
-
-          {/* Dynamic Status Bar */}
-          <div className="mt-3 flex items-center justify-center gap-2 text-xs font-semibold">
-            {scanStatus === 'scanning' && (
-              <span className="flex items-center gap-2 text-amber-300">
-                <Scan className="w-4 h-4 animate-pulse text-amber-400" />
-                {statusMessage}
-              </span>
-            )}
-            {scanStatus === 'approved' && matchResult && (
-              <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
-                <Sparkles className="w-4 h-4 text-emerald-300" />
-                Biometria Aprovada ({matchResult.score}%) • Liberando Acesso...
-              </span>
-            )}
-            {scanStatus === 'timeout' && (
-              <span className="flex items-center gap-1.5 text-rose-400 font-bold">
-                <AlertTriangle className="w-4 h-4 text-rose-400" />
-                Rosto não reconhecido
-              </span>
-            )}
-          </div>
-
-          {/* Feedback messages */}
-          {authFailed && (
-            <div className="w-full mt-3 p-3 bg-red-950/70 border border-red-700 rounded-2xl text-red-200 text-xs flex items-center gap-2 animate-in fade-in">
-              <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
-              <span className="font-medium text-[11px] leading-tight">{authFailed}</span>
-            </div>
+          {scanStatus === 'approved' && matchResult && (
+            <span className="flex items-center gap-1.5 text-emerald-600 font-black">
+              <Sparkles className="w-4 h-4 text-emerald-500" />
+              Biometria Aprovada ({matchResult.score}%) • Liberando Acesso...
+            </span>
           )}
-
-          <p className="text-[11px] text-slate-400 text-center mt-2 max-w-xs">
-            {scanStatus === 'scanning' ? (
-              <>Basta olhar diretamente para a câmera. O sistema reconhece e <strong className="text-white">libera o acesso automaticamente</strong>.</>
-            ) : scanStatus === 'timeout' ? (
-              <>Certifique-se de estar em um local iluminado e clique abaixo para tentar novamente.</>
-            ) : (
-              <>Acesso validado com sucesso.</>
-            )}
-          </p>
-
-          {/* Action Buttons: Only shown if timeout occurs or camera error */}
           {scanStatus === 'timeout' && (
-            <div className="flex items-center gap-2.5 w-full mt-4 animate-in fade-in">
-              <button
-                type="button"
-                onClick={startCamera}
-                className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 text-xs font-black flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 transition-all hover:scale-[1.01] active:scale-[0.99]"
-              >
-                <RefreshCw className="w-4 h-4" />
-                Tentar Reconhecimento Novamente
-              </button>
-            </div>
+            <span className="flex items-center gap-1.5 text-rose-600 font-black">
+              <AlertTriangle className="w-4 h-4 text-rose-600" />
+              Rosto não reconhecido
+            </span>
           )}
         </div>
+
+        <p className={`text-xs max-w-xs leading-relaxed ${screenFlash ? 'text-slate-600 font-medium' : 'text-slate-400'}`}>
+          {scanStatus === 'scanning' ? (
+            <>Olhe para o círculo central. A tela branca funciona como <strong className={screenFlash ? 'text-slate-900 font-bold' : 'text-white'}>iluminação frontal para o seu rosto</strong>.</>
+          ) : scanStatus === 'timeout' ? (
+            <>Mantenha o rosto centralizado no círculo e clique no botão abaixo para tentar novamente.</>
+          ) : (
+            <>Identidade validada com sucesso.</>
+          )}
+        </p>
+
+        {authFailed && (
+          <div className="w-full mt-2 p-2.5 bg-red-100 border border-red-300 rounded-xl text-red-900 text-xs font-semibold flex items-center justify-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+            <span>{authFailed}</span>
+          </div>
+        )}
+
+        {scanStatus === 'timeout' && (
+          <button
+            type="button"
+            onClick={startCamera}
+            className="mt-3 py-3 px-6 rounded-2xl bg-slate-950 hover:bg-slate-900 text-white text-xs font-black flex items-center gap-2 shadow-xl active:scale-95 transition-all"
+          >
+            <RefreshCw className="w-4 h-4 text-amber-400" />
+            Tentar Reconhecimento Novamente
+          </button>
+        )}
       </div>
     </div>
   );

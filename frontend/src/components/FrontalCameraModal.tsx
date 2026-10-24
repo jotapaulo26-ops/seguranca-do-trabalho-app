@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { Camera, RefreshCw, X, Check, AlertCircle, Scan, Sparkles, ShieldCheck, AlertTriangle, Fingerprint, Smile, Activity } from 'lucide-react';
+import { Camera, RefreshCw, X, Check, AlertCircle, Scan, Sparkles, ShieldCheck, AlertTriangle, Fingerprint, Smile, Activity, Lightbulb } from 'lucide-react';
 import { 
   compareFaces, 
   BiometricMatchResult, 
@@ -57,6 +57,24 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
   const [autoMessage, setAutoMessage] = useState('Iniciando Face ID...');
   const [matchResult, setMatchResult] = useState<BiometricMatchResult | null>(null);
   const [scanSeconds, setScanSeconds] = useState(0);
+
+  // Screen Flash Ring Light (defaults to TRUE to illuminate operator's face with full-screen pure white)
+  const [screenFlash, setScreenFlash] = useState(true);
+
+  // Keep screen bright & awake via Screen Wake Lock API
+  useEffect(() => {
+    let wakeLockSentinel: any = null;
+    if (isOpen && typeof navigator !== 'undefined' && 'wakeLock' in navigator && (navigator as any).wakeLock) {
+      (navigator as any).wakeLock.request('screen').then((lock: any) => {
+        wakeLockSentinel = lock;
+      }).catch(() => {});
+    }
+    return () => {
+      if (wakeLockSentinel) {
+        wakeLockSentinel.release().catch(() => {});
+      }
+    };
+  }, [isOpen]);
 
   // Fallback state: fail counter and fingerprint status
   const [failCount, setFailCount] = useState(0);
@@ -549,39 +567,72 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-sm bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+    <div
+      className={`fixed inset-0 z-50 flex flex-col items-center justify-between p-4 sm:p-6 transition-colors duration-300 animate-in fade-in select-none ${
+        screenFlash ? 'bg-white text-slate-950' : 'bg-slate-950/90 text-white backdrop-blur-md'
+      }`}
+    >
+      <div className={`relative w-full max-w-sm flex flex-col justify-between h-full ${
+        screenFlash ? 'text-slate-950' : 'text-white'
+      }`}>
         {/* Header */}
-        <div className="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+        <div className={`px-4 py-3 border rounded-2xl flex items-center justify-between shadow-sm transition-colors ${
+          screenFlash ? 'bg-slate-50 border-slate-200' : 'bg-slate-900 border-slate-800'
+        }`}>
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-amber-500/10 rounded-xl border border-amber-500/20 text-amber-400">
+            <div className={`p-2 rounded-xl border ${
+              screenFlash ? 'bg-amber-100 border-amber-300 text-amber-800' : 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+            }`}>
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-black text-white">{title}</h3>
-              <p className="text-[11px] text-slate-400 font-medium">
+              <h3 className={`text-sm font-black ${screenFlash ? 'text-slate-950' : 'text-white'}`}>{title}</h3>
+              <p className={`text-[11px] font-medium ${screenFlash ? 'text-slate-600' : 'text-slate-400'}`}>
                 {workerName ? (
-                  <>Titular: <span className="text-amber-300 font-semibold">{workerName}</span></>
+                  <>Titular: <span className={screenFlash ? 'text-amber-800 font-bold' : 'text-amber-300 font-semibold'}>{workerName}</span></>
                 ) : (
-                  'Posicione o rosto no círculo'
+                  'Posicione o rosto no círculo central'
                 )}
               </p>
             </div>
           </div>
-          <button
-            onClick={() => {
-              stopStream();
-              onClose();
-            }}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+
+          <div className="flex items-center gap-1.5">
+            {/* Flash Light Toggle */}
+            <button
+              type="button"
+              onClick={() => setScreenFlash(!screenFlash)}
+              title={screenFlash ? 'Desativar flash de tela branca' : 'Ativar flash de tela branca'}
+              className={`p-2 rounded-xl text-xs font-bold flex items-center gap-1 transition-all active:scale-95 border ${
+                screenFlash
+                  ? 'bg-amber-100 text-amber-950 border-amber-300 hover:bg-amber-200'
+                  : 'bg-slate-800 text-slate-300 border-slate-700 hover:text-white'
+              }`}
+            >
+              <Lightbulb className={`w-4 h-4 ${screenFlash ? 'text-amber-600 fill-amber-400' : 'text-slate-400'}`} />
+            </button>
+
+            <button
+              onClick={() => {
+                stopStream();
+                onClose();
+              }}
+              className={`p-2 rounded-xl transition-colors ${
+                screenFlash ? 'text-slate-500 hover:text-slate-950 hover:bg-slate-200' : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
-        {/* Viewfinder Area */}
-        <div className="relative p-5 flex flex-col items-center justify-center bg-slate-900/50">
-          <div className="relative w-64 h-64 rounded-3xl overflow-hidden bg-black shadow-inner border-2 border-slate-700/80 flex items-center justify-center">
+        {/* Viewfinder Circular Cutout (Only place where face is visible) */}
+        <div className="relative my-auto flex flex-col items-center justify-center">
+          <div className={`relative w-64 h-64 sm:w-72 sm:h-72 rounded-full overflow-hidden bg-black shadow-2xl border-4 flex items-center justify-center transition-all duration-300 ${
+            screenFlash
+              ? 'border-slate-950 shadow-[0_0_60px_rgba(0,0,0,0.35)] ring-4 ring-amber-400/50'
+              : 'border-slate-700 shadow-inner'
+          }`}>
             {cameraError ? (
               <div className="p-4 text-center flex flex-col items-center gap-2">
                 <AlertCircle className="w-8 h-8 text-rose-500" />
@@ -599,7 +650,7 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
                 <img
                   src={capturedImage}
                   alt="Foto capturada"
-                  className="w-full h-full object-cover rounded-2xl"
+                  className="w-full h-full object-cover"
                 />
                 {isAutoMode && autoStatus === 'approved' && (
                   <div className="absolute inset-0 bg-emerald-950/70 backdrop-blur-[2px] flex flex-col items-center justify-center animate-in zoom-in-95">
@@ -659,15 +710,17 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
 
           {/* DYNAMIC LIVENESS CHALLENGE BANNER */}
           {requireLivenessChallenge && isAutoMode && autoStatus === 'scanning' && (
-            <div className="w-full mt-3 p-2.5 rounded-2xl bg-slate-950/70 border border-slate-800 flex flex-col gap-1.5 animate-in fade-in">
+            <div className={`w-full mt-3 p-3 rounded-2xl border flex flex-col gap-1.5 animate-in fade-in transition-colors ${
+              screenFlash ? 'bg-slate-100 border-slate-300 text-slate-900 shadow-sm' : 'bg-slate-950/70 border-slate-800 text-white'
+            }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   {challengeType === 'smile' ? (
-                    <Smile className={`w-4 h-4 ${livenessPassed ? 'text-emerald-400' : 'text-amber-400 animate-bounce'}`} />
+                    <Smile className={`w-4 h-4 ${livenessPassed ? 'text-emerald-500' : 'text-amber-600 animate-bounce'}`} />
                   ) : (
-                    <Activity className={`w-4 h-4 ${livenessPassed ? 'text-emerald-400' : 'text-amber-400 animate-pulse'}`} />
+                    <Activity className={`w-4 h-4 ${livenessPassed ? 'text-emerald-500' : 'text-amber-600 animate-pulse'}`} />
                   )}
-                  <span className={`text-[11px] font-bold ${livenessPassed ? 'text-emerald-300' : 'text-amber-200'}`}>
+                  <span className={`text-[11px] font-extrabold ${livenessPassed ? 'text-emerald-700' : screenFlash ? 'text-slate-900' : 'text-amber-200'}`}>
                     {livenessPassed ? '✅ Prova de Vida Aprovada!' : livenessHint}
                   </span>
                 </div>
@@ -676,7 +729,7 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
                     type="button"
                     onClick={toggleChallengeType}
                     title="Mudar tipo de desafio de vida"
-                    className="text-[9px] text-slate-400 hover:text-amber-300 underline font-semibold"
+                    className={`text-[9px] underline font-bold ${screenFlash ? 'text-slate-600 hover:text-black' : 'text-slate-400 hover:text-amber-300'}`}
                   >
                     Alternar teste
                   </button>
@@ -684,10 +737,10 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
               </div>
 
               {/* Animated Progress Bar */}
-              <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+              <div className={`w-full h-2 rounded-full overflow-hidden ${screenFlash ? 'bg-slate-200' : 'bg-slate-800'}`}>
                 <div
                   className={`h-full transition-all duration-200 ${
-                    livenessPassed ? 'bg-emerald-400' : 'bg-gradient-to-r from-amber-500 to-emerald-400'
+                    livenessPassed ? 'bg-emerald-500' : 'bg-gradient-to-r from-amber-500 to-emerald-500'
                   }`}
                   style={{ width: `${livenessProgress}%` }}
                 />
@@ -700,29 +753,29 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
             <div className="mt-2.5 flex flex-col items-center text-center">
               <div className="flex items-center gap-1.5 text-xs font-bold">
                 {autoStatus === 'scanning' && (
-                  <span className={`flex items-center gap-1.5 ${livenessPassed ? 'text-emerald-300' : 'text-amber-300'}`}>
-                    <Scan className="w-4 h-4 animate-pulse text-amber-400" />
+                  <span className={`flex items-center gap-1.5 font-black ${livenessPassed ? 'text-emerald-600' : screenFlash ? 'text-amber-800' : 'text-amber-300'}`}>
+                    <Scan className="w-4 h-4 animate-pulse text-amber-500" />
                     {autoMessage}
                   </span>
                 )}
                 {autoStatus === 'approved' && matchResult && (
-                  <span className="flex items-center gap-1.5 text-emerald-400">
-                    <Sparkles className="w-4 h-4 text-emerald-300" />
+                  <span className="flex items-center gap-1.5 text-emerald-600 font-black">
+                    <Sparkles className="w-4 h-4 text-emerald-500" />
                     Face ID Aprovado ({matchResult.score}%) • Homologando...
                   </span>
                 )}
                 {autoStatus === 'timeout' && (
-                  <span className="flex items-center gap-1.5 text-rose-400">
-                    <AlertTriangle className="w-4 h-4 text-rose-400" />
+                  <span className="flex items-center gap-1.5 text-rose-600 font-black">
+                    <AlertTriangle className="w-4 h-4 text-rose-600" />
                     Rosto diferente do cadastro ({failCount}ª tentativa)
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-slate-400 mt-1 max-w-xs">
+              <p className={`text-[11px] mt-1 max-w-xs ${screenFlash ? 'text-slate-700 font-medium' : 'text-slate-400'}`}>
                 {autoStatus === 'scanning'
                   ? requireLivenessChallenge && !livenessPassed
                     ? 'Execute o movimento solicitado para validar que você está ao vivo em frente à câmera.'
-                    : 'Mantenha o rosto alinhado. O Face ID valida com 2 quadros de confirmação.'
+                    : 'A tela branca ilumina o rosto. Mantenha o rosto alinhado no círculo.'
                   : autoStatus === 'timeout'
                   ? failCount >= 2
                     ? '2 falhas consecutivas: você pode tentar novamente ou assinar com a digital do aparelho abaixo.'
@@ -731,16 +784,18 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
               </p>
             </div>
           ) : (
-            <p className="text-[11px] text-slate-400 mt-2 text-center max-w-xs">
+            <p className={`text-[11px] mt-2 text-center max-w-xs ${screenFlash ? 'text-slate-700 font-medium' : 'text-slate-400'}`}>
               {capturedImage
                 ? 'Verifique se a foto está nítida e bem iluminada para concluir.'
-                : 'Posicione seu rosto dentro da moldura e clique em Capturar Foto.'}
+                : 'Posicione seu rosto dentro do círculo central e clique em Capturar Foto.'}
             </p>
           )}
         </div>
 
         {/* Controls Footer */}
-        <div className="p-4 border-t border-slate-800 bg-slate-950/50 flex flex-col gap-2.5">
+        <div className={`p-3.5 border rounded-2xl flex flex-col gap-2.5 shadow-sm transition-colors ${
+          screenFlash ? 'bg-slate-50 border-slate-200' : 'bg-slate-900 border-slate-800'
+        }`}>
           {isAutoMode ? (
             autoStatus === 'timeout' ? (
               <div className="flex flex-col gap-2 w-full animate-in fade-in">
@@ -761,7 +816,7 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
                   <button
                     type="button"
                     onClick={() => startCamera(facingMode)}
-                    className="flex-1 py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center justify-center gap-2 border border-slate-700"
+                    className="flex-1 py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md"
                   >
                     <RefreshCw className="w-3.5 h-3.5 text-amber-400" />
                     Tentar Facial Novamente
@@ -770,7 +825,9 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
                   <button
                     type="button"
                     onClick={toggleFacingMode}
-                    className="py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-slate-700"
+                    className={`py-2.5 px-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 border ${
+                      screenFlash ? 'bg-white border-slate-300 text-slate-800 hover:bg-slate-100' : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
+                    }`}
                   >
                     <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
                     <span>{facingMode === 'user' ? 'Frontal' : 'Traseira'}</span>
@@ -783,12 +840,16 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
                   type="button"
                   onClick={toggleFacingMode}
                   title="Alternar entre câmera frontal e traseira"
-                  className="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-slate-700"
+                  className={`py-2 px-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 border ${
+                    screenFlash ? 'bg-white border-slate-300 text-slate-800 hover:bg-slate-100' : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
+                  }`}
                 >
-                  <RefreshCw className="w-3.5 h-3.5 text-amber-400" />
+                  <RefreshCw className="w-3.5 h-3.5 text-amber-500" />
                   <span>{facingMode === 'user' ? 'Frontal' : 'Traseira'}</span>
                 </button>
-                <span className="text-[11px] text-slate-500 font-medium">Reconhecimento sem clique</span>
+                <span className={`text-[11px] font-bold ${screenFlash ? 'text-slate-600' : 'text-slate-500'}`}>
+                  Reconhecimento sem clique
+                </span>
               </div>
             )
           ) : (
@@ -799,10 +860,12 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
                   type="button"
                   onClick={toggleFacingMode}
                   title="Alternar entre câmera frontal e traseira"
-                  className="py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold flex items-center gap-2 border border-slate-700 transition-colors"
+                  className={`py-2.5 px-3 rounded-xl text-xs font-semibold flex items-center gap-2 border transition-colors ${
+                    screenFlash ? 'bg-white border-slate-300 text-slate-800 hover:bg-slate-100' : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
+                  }`}
                 >
-                  <RefreshCw className="w-4 h-4 text-amber-400" />
-                  <span>{facingMode === 'user' ? 'Câmera Frontal' : 'Câmera Traseira'}</span>
+                  <RefreshCw className="w-4 h-4 text-amber-500" />
+                  <span>{facingMode === 'user' ? 'Frontal' : 'Traseira'}</span>
                 </button>
 
                 <button
@@ -820,7 +883,9 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
                 <button
                   type="button"
                   onClick={handleRetake}
-                  className="py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold flex items-center gap-2 border border-slate-700 transition-colors"
+                  className={`py-2.5 px-4 rounded-xl text-xs font-semibold flex items-center gap-2 border transition-colors ${
+                    screenFlash ? 'bg-white border-slate-300 text-slate-800 hover:bg-slate-100' : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
+                  }`}
                 >
                   <RefreshCw className="w-4 h-4" />
                   <span>Tirar Outra</span>
