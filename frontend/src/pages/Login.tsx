@@ -18,7 +18,10 @@ import {
   ArrowLeft,
   Building2,
   Phone,
-  User
+  User,
+  Scan,
+  FileCheck2,
+  MapPin
 } from 'lucide-react';
 
 export const Login: React.FC = () => {
@@ -207,21 +210,119 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col justify-center items-center p-4">
-      <div className="w-full max-w-md">
-        {/* Brand Header */}
-        <div className="text-center mb-6">
-          <div className="inline-flex w-14 h-14 rounded-2xl bg-amber-500 items-center justify-center text-3xl shadow-xl shadow-amber-500/20 mb-2.5">
-            🛡️
+    <div className="min-h-screen bg-slate-950 flex flex-col lg:grid lg:grid-cols-12 relative overflow-hidden font-sans">
+      {/* Mobile background overlay with wallpaper */}
+      <div 
+        className="lg:hidden fixed inset-0 bg-cover bg-center -z-10"
+        style={{ backgroundImage: `url('/wallpaper_seguranca.jpeg')` }}
+      >
+        <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm" />
+      </div>
+
+      {/* LEFT COLUMN: DESKTOP WALLPAPER HERO (Hidden on mobile, shown on lg+) */}
+      <div className="hidden lg:flex lg:col-span-7 xl:col-span-7 relative flex-col justify-between p-12 overflow-hidden bg-slate-950">
+        {/* Full cover background image */}
+        <img
+          src="/wallpaper_seguranca.jpeg"
+          alt="Segurança do Trabalho Wallpaper"
+          className="absolute inset-0 w-full h-full object-cover object-center scale-105 transition-transform duration-1000 ease-out"
+        />
+
+        {/* Ambient Gradient Overlays for perfect legibility & cinematic depth */}
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/50 to-slate-950/60" />
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-slate-950/90" />
+        <div className="absolute inset-0 bg-amber-500/10 mix-blend-overlay" />
+
+        {/* Top Header Badge */}
+        <div className="relative z-10 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500 flex items-center justify-center text-2xl shadow-xl shadow-amber-500/30 border border-amber-400/50">
+              🛡️
+            </div>
+            <div>
+              <span className="text-xl font-black text-white tracking-tight flex items-center gap-2">
+                SegTrabalho
+                <span className="text-[10px] uppercase font-mono tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                  v2.5
+                </span>
+              </span>
+              <p className="text-xs text-slate-300 font-medium">
+                Gestão Integrada de Segurança & Saúde Ocupacional
+              </p>
+            </div>
           </div>
-          <h1 className="text-2xl font-black text-white tracking-tight">SegTrabalho</h1>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Gestão Integrada de Segurança, APRs e Mapa de Riscos
-          </p>
+
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-md border border-slate-700/60 text-[11px] text-slate-300">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+            <span className="w-2 h-2 rounded-full bg-emerald-400 -ml-3"></span>
+            <span className="font-semibold text-emerald-400">Sistema Online</span>
+          </div>
         </div>
 
-        {/* Card Container */}
-        <div className="bg-white rounded-3xl p-6 md:p-8 shadow-2xl border border-slate-100">
+        {/* Center / Bottom High-Impact SST Pitch */}
+        <div className="relative z-10 max-w-xl my-auto py-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-bold mb-4 backdrop-blur-md">
+            <ShieldCheck className="w-4 h-4 text-amber-400" />
+            <span>Ambiente Corporativo de Alta Precisão</span>
+          </div>
+          <h2 className="text-3xl xl:text-4xl font-black text-white leading-tight tracking-tight drop-shadow-md">
+            Segurança Operacional, Homologação com Face ID e Gestão de Riscos.
+          </h2>
+          <p className="text-sm xl:text-base text-slate-300 mt-3.5 leading-relaxed drop-shadow">
+            Plataforma homologada para emissão e assinatura de APRs, Permissões de Trabalho (PT/PET), Mapas de Risco e Brigada com validação biométrica e conformidade jurídica.
+          </p>
+
+          {/* Feature Pillars */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-8">
+            <div className="p-3.5 rounded-2xl bg-slate-900/70 backdrop-blur-md border border-slate-800/80 hover:border-amber-500/40 transition-colors">
+              <Scan className="w-5 h-5 text-amber-400 mb-2" />
+              <h4 className="text-xs font-black text-white">Biometria Facial</h4>
+              <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">
+                Prova de Vida (Liveness Test) e consenso multizonal 64x64.
+              </p>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-slate-900/70 backdrop-blur-md border border-slate-800/80 hover:border-amber-500/40 transition-colors">
+              <FileCheck2 className="w-5 h-5 text-emerald-400 mb-2" />
+              <h4 className="text-xs font-black text-white">Normas e Laudos</h4>
+              <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">
+                Total conformidade com NR-01, NR-33, NR-35 e SST.
+              </p>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-slate-900/70 backdrop-blur-md border border-slate-800/80 hover:border-amber-500/40 transition-colors">
+              <MapPin className="w-5 h-5 text-blue-400 mb-2" />
+              <h4 className="text-xs font-black text-white">Cerca Virtual</h4>
+              <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">
+                Rastreamento e geolocalização de equipes e brigadistas.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer info */}
+        <div className="relative z-10 flex items-center justify-between pt-6 border-t border-slate-800/60 text-[11px] text-slate-400">
+          <span>Usina Santa Isabel • Monitoramento SST Ativo</span>
+          <span className="font-mono text-[10px] text-slate-500">Criptografia Ponta a Ponta</span>
+        </div>
+      </div>
+
+      {/* RIGHT COLUMN: LOGIN / REGISTER CARD (Full width on mobile, 5 cols on desktop) */}
+      <div className="lg:col-span-5 xl:col-span-5 flex flex-col justify-center items-center p-4 sm:p-8 lg:p-12 min-h-screen z-10">
+        <div className="w-full max-w-md">
+          {/* Mobile-only brand header */}
+          <div className="text-center mb-6 lg:hidden">
+            <div className="inline-flex w-14 h-14 rounded-2xl bg-amber-500 items-center justify-center text-3xl shadow-xl shadow-amber-500/20 mb-2.5">
+              🛡️
+            </div>
+            <h1 className="text-2xl font-black text-white tracking-tight">SegTrabalho</h1>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Gestão Integrada de Segurança, APRs e Mapa de Riscos
+            </p>
+          </div>
+
+          {/* Card Container */}
+          <div className="bg-white rounded-3xl p-6 md:p-8 shadow-2xl border border-slate-100/80 backdrop-blur-lg">
           {mode === 'login' && (
             <>
               <div className="flex items-center justify-between mb-4">
@@ -500,6 +601,7 @@ export const Login: React.FC = () => {
           )}
         </div>
       </div>
+    </div>
 
       {/* MODAL 1: Validação Facial no Login (compareFaces) */}
       {isBiometricModalOpen && preLoginData?.referencePhotoUrl && (
