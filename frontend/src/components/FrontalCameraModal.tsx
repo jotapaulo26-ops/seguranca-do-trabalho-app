@@ -1,11 +1,13 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { Camera, RefreshCw, X, Check, AlertCircle, Scan, Sparkles, ShieldCheck, AlertTriangle } from 'lucide-react';
-import { compareFaces, BiometricMatchResult } from '../services/facialBiometrics';
+import { Camera, RefreshCw, X, Check, AlertCircle, Scan, Sparkles, ShieldCheck, AlertTriangle, Fingerprint } from 'lucide-react';
+import { compareFaces, BiometricMatchResult, verifyLiveness } from '../services/facialBiometrics';
+import { authenticateWithDeviceBiometrics } from '../services/deviceBiometrics';
+import { api } from '../services/api';
 
 interface FrontalCameraModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCapture: (compressedDataUrl: string) => void;
+  onCapture: (compressedDataUrl: string, biometricType?: 'face' | 'fingerprint') => void;
   title?: string;
   workerName?: string;
   referencePhotoUrl?: string | null;
@@ -24,6 +26,7 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
   const scanIntervalRef = useRef<any>(null);
   const isComparingRef = useRef(false);
   const hasMatchedRef = useRef(false);
+  const prevPixelsRef = useRef<number[]>([]);
 
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -36,6 +39,10 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
   const [autoMessage, setAutoMessage] = useState('Iniciando Face ID...');
   const [matchResult, setMatchResult] = useState<BiometricMatchResult | null>(null);
   const [scanSeconds, setScanSeconds] = useState(0);
+
+  // Fallback state: fail counter and fingerprint status
+  const [failCount, setFailCount] = useState(0);
+  const [isAuthenticatingFingerprint, setIsAuthenticatingFingerprint] = useState(false);
 
   // Harmonic success chime
   const playSuccessChime = () => {
@@ -75,6 +82,32 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
     } catch (e) {}
   };
 
+  // Log divergence snapshot with GPS to backend
+  const logDivergenceSnapshot = (snapshotUrl?: string) => {
+    try {
+      const sendLog = (lat?: number, lng?: number) => {
+        api.post('/audit/divergence', {
+          workerName: workerName || 'Colaborador',
+          attemptNumber: failCount + 1,
+          snapshotPhotoUrl: snapshotUrl,
+          lat,
+          lng,
+          reason: 'Divergência facial detectada (rosto diferente do cadastro)'
+        }).catch(() => {});
+      };
+
+      if (typeof navigator !== 'undefined' && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => sendLog(pos.coords.latitude, pos.coords.longitude),
+          () => sendLog(),
+          { timeout: 3500 }
+        );
+      } else {
+        sendLog();
+      }
+    } catch (e) {}
+  };
+
   // Stop camera helper
   const stopStream = useCallback(() => {
     if (scanIntervalRef.current) {
@@ -104,6 +137,7 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
     setScanSeconds(0);
     hasMatchedRef.current = false;
     isComparingRef.current = false;
+    prevPixelsRef.current = [];
     setAutoStatus('starting');
     setAutoMessage('Iniciando câmera...');
 
@@ -178,7 +212,7 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
     }
   }, [isOpen, isInitializing]);
 
-  // Automatic Face ID scanning loop when referencePhotoUrl is present
+  // Automatic Face ID scanning loop with Liveness & 2-attempt tracking
   useEffect(() => {
     if (!isOpen || !isAutoMode || isInitializing || !!cameraError || !referencePhotoUrl) {
       return;
@@ -206,13 +240,31 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
           scanIntervalRef.current = null;
         }
         playDivergenceBeep();
+        setFailCount((prev) => {
+          const nextCount = prev + 1;
+          return nextCount;
+        });
+
+        // Capture snapshot of the failed face for audit log
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = 320;
+          canvas.height = 320;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(video, 0, 0, 320, 320);
+            const snapshotUrl = canvas.toDataURL('image/jpeg', 0.65);
+            logDivergenceSnapshot(snapshotUrl);
+          }
+        } catch (e) {}
+
         setAutoStatus('timeout');
-        setAutoMessage('Rosto não reconhecido com o titular.');
+        setAutoMessage('Rosto divergente do titular cadastrado.');
         return;
       }
 
       isComparingRef.current = true;
-      setAutoMessage('Escaneando feições em tempo real...');
+      setAutoMessage('Escaneando feições e checando prova de vida...');
 
       try {
         const width = video.videoWidth || 640;
@@ -235,8 +287,26 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
           ctx.drawImage(video, startX, startY, size, size, 0, 0, targetSize, targetSize);
 
           const liveDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+          // Get image pixels for liveness validation
+          const imgData = ctx.getImageData(0, 0, 32, 32).data;
+          const currPixels: number[] = [];
+          for (let p = 0; p < imgData.length; p += 4) {
+            currPixels.push(Math.round(0.299 * imgData[p] + 0.587 * imgData[p + 1] + 0.114 * imgData[p + 2]));
+          }
+
+          // Anti-spoofing / Liveness Check
+          const liveness = verifyLiveness(prevPixelsRef.current, currPixels);
+          prevPixelsRef.current = currPixels;
+
+          if (!liveness.isLive) {
+            setAutoMessage('Aviso: Movimente suavemente o rosto (Anti-Spoofing)');
+            return;
+          }
+
           const result = await compareFaces(referencePhotoUrl, liveDataUrl);
 
+          // Threshold: score >= 58 is a match for the registered user
           if (result.isMatch && result.score >= 58 && !hasMatchedRef.current) {
             hasMatchedRef.current = true;
             if (scanIntervalRef.current) {
@@ -252,7 +322,7 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
 
             setTimeout(() => {
               stopStream();
-              onCapture(liveDataUrl);
+              onCapture(liveDataUrl, 'face');
               onClose();
             }, 650);
             return;
@@ -272,6 +342,31 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
       }
     };
   }, [isOpen, isAutoMode, isInitializing, cameraError, referencePhotoUrl, autoStatus, facingMode, stopStream, onCapture, onClose]);
+
+  // Fallback: Trigger Device Biometrics (Fingerprint / WebAuthn)
+  const handleDeviceFingerprint = async () => {
+    setIsAuthenticatingFingerprint(true);
+    try {
+      const res = await authenticateWithDeviceBiometrics(workerName || 'Colaborador');
+      if (res.success) {
+        playSuccessChime();
+        setAutoStatus('approved');
+        setAutoMessage('Digital do Aparelho Aprovada!');
+        setTimeout(() => {
+          stopStream();
+          onCapture(capturedImage || referencePhotoUrl || '', 'fingerprint');
+          onClose();
+        }, 650);
+      } else {
+        playDivergenceBeep();
+        alert(res.error || 'Falha ao autenticar com a digital do aparelho.');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Erro no sensor de biometria digital.');
+    } finally {
+      setIsAuthenticatingFingerprint(false);
+    }
+  };
 
   // Toggle between Frontal and Rear camera
   const toggleFacingMode = () => {
@@ -311,7 +406,7 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
 
   const handleConfirm = () => {
     if (capturedImage) {
-      onCapture(capturedImage);
+      onCapture(capturedImage, 'face');
       onClose();
     }
   };
@@ -337,7 +432,7 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
             <div>
               <div className="flex items-center gap-1.5">
                 <h3 className="font-extrabold text-sm text-white">
-                  {isAutoMode ? 'Face ID Automático' : title}
+                  {isAutoMode ? 'Face ID Obrigatório' : title}
                 </h3>
                 {isAutoMode && (
                   <span className="text-[10px] px-1.5 py-0.2 bg-amber-500/20 text-amber-300 font-bold rounded-md">
@@ -459,7 +554,7 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
                 {autoStatus === 'timeout' && (
                   <span className="flex items-center gap-1.5 text-rose-400">
                     <AlertTriangle className="w-4 h-4 text-rose-400" />
-                    Rosto não identificado ou divergente
+                    Rosto diferente do cadastro ({failCount}ª tentativa)
                   </span>
                 )}
               </div>
@@ -467,7 +562,9 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
                 {autoStatus === 'scanning'
                   ? 'Olhe para a câmera. O reconhecimento é 100% automático e valida no mesmo instante.'
                   : autoStatus === 'timeout'
-                  ? 'Ajuste a iluminação e clique em "Tentar Novamente" abaixo.'
+                  ? failCount >= 2
+                    ? '2 falhas consecutivas: você pode tentar novamente ou assinar com a digital do aparelho abaixo.'
+                    : 'Ajuste a iluminação e clique em "Tentar Novamente" abaixo.'
                   : 'Presença confirmada com sucesso.'}
               </p>
             </div>
@@ -481,19 +578,42 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
         </div>
 
         {/* Controls Footer */}
-        <div className="p-4 border-t border-slate-800 bg-slate-950/50 flex items-center justify-between gap-3">
+        <div className="p-4 border-t border-slate-800 bg-slate-950/50 flex flex-col gap-2.5">
           {isAutoMode ? (
-            /* Auto Mode Footer */
             autoStatus === 'timeout' ? (
-              <div className="flex items-center gap-2.5 w-full">
-                <button
-                  type="button"
-                  onClick={() => startCamera(facingMode)}
-                  className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 text-slate-950 text-xs font-black flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  Tentar Novamente
-                </button>
+              <div className="flex flex-col gap-2 w-full animate-in fade-in">
+                {/* Contingência com Digital do Aparelho (disponível se falhou 2 vezes) */}
+                {failCount >= 2 && (
+                  <button
+                    type="button"
+                    onClick={handleDeviceFingerprint}
+                    disabled={isAuthenticatingFingerprint}
+                    className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white text-xs font-black flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+                  >
+                    <Fingerprint className="w-4 h-4 text-indigo-200" />
+                    {isAuthenticatingFingerprint ? 'Aguardando Sensor Digital...' : 'Assinar com a Digital do Aparelho'}
+                  </button>
+                )}
+
+                <div className="flex items-center gap-2 w-full">
+                  <button
+                    type="button"
+                    onClick={() => startCamera(facingMode)}
+                    className="flex-1 py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center justify-center gap-2 border border-slate-700"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5 text-amber-400" />
+                    Tentar Facial Novamente
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={toggleFacingMode}
+                    className="py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-slate-700"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
+                    <span>{facingMode === 'user' ? 'Frontal' : 'Traseira'}</span>
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="flex items-center justify-between w-full">
@@ -512,7 +632,7 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
           ) : (
             /* Manual Capture Mode Footer (First-time enrollment) */
             !capturedImage ? (
-              <>
+              <div className="flex items-center justify-between gap-3 w-full">
                 <button
                   type="button"
                   onClick={toggleFacingMode}
@@ -532,9 +652,9 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
                   <Camera className="w-4 h-4" />
                   <span>Capturar Foto</span>
                 </button>
-              </>
+              </div>
             ) : (
-              <>
+              <div className="flex items-center justify-between gap-3 w-full">
                 <button
                   type="button"
                   onClick={handleRetake}
@@ -552,7 +672,7 @@ export const FrontalCameraModal: React.FC<FrontalCameraModalProps> = ({
                   <Check className="w-4 h-4" />
                   <span>Aprovar e Usar Foto</span>
                 </button>
-              </>
+              </div>
             )
           )}
         </div>

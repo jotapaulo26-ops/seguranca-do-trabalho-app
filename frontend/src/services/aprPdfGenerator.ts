@@ -348,8 +348,13 @@ export async function generateAprPdf(doc: DocumentRecord, companySettings?: any)
           try {
             pdf.addImage(matchingSig.photoDataUrl, 'JPEG', x + 60, currentY + 6, 16, 16);
             pdf.setFontSize(5.5);
-            pdf.setTextColor(16, 149, 106);
-            pdf.text('FACE ID OK', x + 61, currentY + 24);
+            if (matchingSig.biometricType === 'fingerprint') {
+              pdf.setTextColor(79, 70, 229);
+              pdf.text('DIGITAL OK', x + 60, currentY + 24);
+            } else {
+              pdf.setTextColor(16, 149, 106);
+              pdf.text('FACE ID OK', x + 61, currentY + 24);
+            }
           } catch (e) {}
         }
       } else {

@@ -50,6 +50,7 @@ export const SignatureModalCenter: React.FC<SignatureModalCenterProps> = ({
 
   // Photo selfie & Frontal Camera state
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
+  const [biometricMethod, setBiometricMethod] = useState<'face' | 'fingerprint'>('face');
   const [cameraModalOpen, setCameraModalOpen] = useState(false);
   const [workerReferencePhoto, setWorkerReferencePhoto] = useState<string | null>(null);
   const [biometricResult, setBiometricResult] = useState<BiometricMatchResult | null>(null);
@@ -230,50 +231,36 @@ export const SignatureModalCenter: React.FC<SignatureModalCenterProps> = ({
     setHasDrawn(false);
   };
 
-  // Handle Photo capture from Frontal Camera
-  const handlePhotoCapture = async (compressedDataUrl: string) => {
+  // Handle Photo capture from Frontal Camera or Fingerprint fallback
+  const handlePhotoCapture = async (compressedDataUrl: string, bioType?: 'face' | 'fingerprint') => {
     setPhotoDataUrl(compressedDataUrl);
+    setBiometricMethod(bioType || 'face');
+
+    if (bioType === 'fingerprint') {
+      setBiometricResult({
+        score: 100,
+        isMatch: true,
+        confidence: 'alta',
+        label: 'Homologado via Digital do Aparelho (TouchID / Sensor Nativo)',
+        color: 'emerald',
+        hasReference: true
+      });
+      return;
+    }
+
     if (workerReferencePhoto) {
       const result = await compareFaces(workerReferencePhoto, compressedDataUrl);
       setBiometricResult(result);
     } else {
-      // Colaborador ainda sem biometria -> cadastra automaticamente no ato
-      const workerId =
-        selectedWorker && !selectedWorker.id.startsWith('supervisor_') && !selectedWorker.id.startsWith('watch_')
-          ? selectedWorker.id
-          : null;
-      if (workerId) {
-        try {
-          await api.post(`/employees/${workerId}/biometrics`, { photo_url: compressedDataUrl });
-          setWorkerReferencePhoto(compressedDataUrl);
-          setBiometricResult({
-            score: 100,
-            isMatch: true,
-            confidence: 'alta',
-            label: '✅ Biometria Facial Registrada e Validada!',
-            color: 'emerald',
-            hasReference: true
-          });
-        } catch {
-          setBiometricResult({
-            score: 100,
-            isMatch: true,
-            confidence: 'alta',
-            label: '✅ Selfie Frontal Registrada',
-            color: 'emerald',
-            hasReference: false
-          });
-        }
-      } else {
-        setBiometricResult({
-          score: 100,
-          isMatch: true,
-          confidence: 'alta',
-          label: '✅ Selfie Frontal Registrada',
-          color: 'emerald',
-          hasReference: false
-        });
-      }
+      // Bloqueio Estrito: Colaborador sem biometria prévia cadastrada
+      setBiometricResult({
+        score: 0,
+        isMatch: false,
+        confidence: 'baixa',
+        label: 'Bloqueado: Colaborador sem biometria cadastrada no sistema!',
+        color: 'rose',
+        hasReference: false
+      });
     }
   };
 
@@ -325,7 +312,11 @@ export const SignatureModalCenter: React.FC<SignatureModalCenterProps> = ({
       alert('Bloqueio SST: A foto de presença com câmera frontal é estritamente obrigatória.');
       return;
     }
-    if (workerReferencePhoto && (!biometricResult || !biometricResult.isMatch)) {
+    if (!workerReferencePhoto && biometricMethod !== 'fingerprint') {
+      alert(`Bloqueio Biométrico SST: O colaborador ${selectedWorker.name} não possui biometria facial prévia cadastrada. Homologação bloqueada.`);
+      return;
+    }
+    if (!biometricResult || !biometricResult.isMatch) {
       alert('Bloqueio Biométrico SST: O rosto capturado está divergente da biometria cadastrada. Homologação bloqueada.');
       return;
     }
@@ -344,7 +335,9 @@ export const SignatureModalCenter: React.FC<SignatureModalCenterProps> = ({
           signerCpf: selectedWorker.cpf,
           signerType: selectedWorker.type,
           signatureDataUrl,
-          photoDataUrl
+          photoDataUrl,
+          biometricType: biometricMethod,
+          biometricScore: biometricResult?.score || 100
         }
       );
 

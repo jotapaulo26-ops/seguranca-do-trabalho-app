@@ -30,13 +30,18 @@ import {
   Calendar,
   Clock,
   PenTool,
+  Fingerprint,
   X
 } from 'lucide-react';
 
 export const DocumentCreatePage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, can } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+
+  // Autorização estrita e pré-requisito de biometria facial
+  const isAuthorized = can('documents', 'create') || can('documents', 'manage');
+  const hasFacialProfile = Boolean(user?.photo_url && user.photo_url.length > 20);
 
   // Core Document Mode: 'APR' | 'PT' | 'OS' | 'EPI_FICHA' | 'CHECKLIST'
   const initialType = (searchParams.get('type') as any) || (searchParams.get('aprId') ? 'PT' : 'APR');
@@ -143,6 +148,7 @@ export const DocumentCreatePage: React.FC = () => {
   const [capturedSignature, setCapturedSignature] = useState<string | null>(null);
   const [emitterPhotoUrl, setEmitterPhotoUrl] = useState<string | null>(null);
   const [emitterBiometricScore, setEmitterBiometricScore] = useState<number | null>(null);
+  const [emitterBiometricType, setEmitterBiometricType] = useState<'face' | 'fingerprint'>('face');
   const [showBiometricModal, setShowBiometricModal] = useState<boolean>(false);
   const [showSigModal, setShowSigModal] = useState<boolean>(false);
   const [createdDoc, setCreatedDoc] = useState<DocumentRecord | null>(null);
@@ -306,6 +312,19 @@ export const DocumentCreatePage: React.FC = () => {
   // BIOMETRIC & SIGNATURE FLOW HANDLER
   const handleStartSigningFlow = () => {
     setValidationError(null);
+
+    // Trava de Autorização
+    if (!isAuthorized) {
+      alert('Bloqueio de Segurança: Seu perfil de usuário não possui permissão para emitir documentos de SST.');
+      return;
+    }
+
+    // Trava de Pré-Cadastro Biométrico
+    if (!hasFacialProfile) {
+      alert('Bloqueio Biométrico: Você não possui biometria facial prévia cadastrada no sistema. O Administrador deve registrar sua face para que você possa gerar documentos.');
+      return;
+    }
+
     if (!emitterPhotoUrl) {
       setShowBiometricModal(true);
     } else {
@@ -313,8 +332,9 @@ export const DocumentCreatePage: React.FC = () => {
     }
   };
 
-  const handleEmitterBiometricCapture = (photoDataUrl: string) => {
+  const handleEmitterBiometricCapture = (photoDataUrl: string, bioType?: 'face' | 'fingerprint') => {
     setEmitterPhotoUrl(photoDataUrl);
+    setEmitterBiometricType(bioType || 'face');
     setEmitterBiometricScore(100);
     setShowBiometricModal(false);
     setShowSigModal(true);
@@ -324,9 +344,19 @@ export const DocumentCreatePage: React.FC = () => {
   const handleSubmitDocument = async () => {
     setValidationError(null);
 
-    // Trava Estrita SST: Reconhecimento Facial Obrigatório
+    if (!isAuthorized) {
+      setValidationError('Bloqueio de Segurança: Perfil não autorizado a gerar documentos.');
+      return;
+    }
+
+    if (!hasFacialProfile) {
+      setValidationError('Bloqueio Biométrico: Biometria facial prévia obrigatória para o emissor.');
+      return;
+    }
+
+    // Trava Estrita SST: Reconhecimento Facial / Digital Obrigatório
     if (!emitterPhotoUrl) {
-      setValidationError('Bloqueio SST: O reconhecimento facial do emissor é estritamente obrigatório para liberar e gerar qualquer documento.');
+      setValidationError('Bloqueio SST: O reconhecimento facial do emissor é estritamente obrigatório. Se for diferente do cadastro, a documentação NÃO será gerada.');
       setShowBiometricModal(true);
       return;
     }
@@ -1645,8 +1675,17 @@ export const DocumentCreatePage: React.FC = () => {
                   />
                   <div className="flex-1">
                     <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-800">
-                      <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                      Face ID Validado com Sucesso
+                      {emitterBiometricType === 'fingerprint' ? (
+                        <>
+                          <Fingerprint className="w-4 h-4 text-indigo-600" />
+                          <span>Digital do Aparelho Validada</span>
+                        </>
+                      ) : (
+                        <>
+                          <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                          <span>Face ID Validado com Sucesso</span>
+                        </>
+                      )}
                     </div>
                     <p className="text-[11px] text-slate-600 font-medium">Emissor: {user?.name}</p>
                   </div>

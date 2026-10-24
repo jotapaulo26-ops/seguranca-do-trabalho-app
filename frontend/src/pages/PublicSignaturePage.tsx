@@ -38,6 +38,7 @@ export const PublicSignaturePage: React.FC = () => {
 
   // Photo selfie & Frontal Camera state
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
+  const [biometricMethod, setBiometricMethod] = useState<'face' | 'fingerprint'>('face');
   const [cameraModalOpen, setCameraModalOpen] = useState(false);
   const [biometricResult, setBiometricResult] = useState<BiometricMatchResult | null>(null);
   const [workerReferencePhoto, setWorkerReferencePhoto] = useState<string | null>(null);
@@ -144,18 +145,32 @@ export const PublicSignaturePage: React.FC = () => {
     setHasDrawn(false);
   };
 
-  const handlePhotoCapture = async (compressedDataUrl: string) => {
+  const handlePhotoCapture = async (compressedDataUrl: string, bioType?: 'face' | 'fingerprint') => {
     setPhotoDataUrl(compressedDataUrl);
+    setBiometricMethod(bioType || 'face');
+
+    if (bioType === 'fingerprint') {
+      setBiometricResult({
+        score: 100,
+        isMatch: true,
+        confidence: 'alta',
+        label: 'Homologado via Digital do Aparelho (TouchID / Sensor Nativo)',
+        color: 'emerald',
+        hasReference: true
+      });
+      return;
+    }
+
     if (workerReferencePhoto) {
       const result = await compareFaces(workerReferencePhoto, compressedDataUrl);
       setBiometricResult(result);
     } else {
       setBiometricResult({
-        score: 100,
-        isMatch: true,
-        confidence: 'alta',
-        label: 'Selfie de presença registrada com sucesso!',
-        color: 'emerald',
+        score: 0,
+        isMatch: false,
+        confidence: 'baixa',
+        label: 'Bloqueado: Colaborador sem biometria prévia cadastrada!',
+        color: 'rose',
         hasReference: false
       });
     }
@@ -188,7 +203,11 @@ export const PublicSignaturePage: React.FC = () => {
       alert('Bloqueio SST: A selfie de presença com câmera frontal é estritamente obrigatória.');
       return;
     }
-    if (workerReferencePhoto && (!biometricResult || !biometricResult.isMatch)) {
+    if (!workerReferencePhoto && biometricMethod !== 'fingerprint') {
+      alert('Bloqueio Biométrico SST: O colaborador não possui biometria facial prévia cadastrada. Assinatura bloqueada até o cadastro da face.');
+      return;
+    }
+    if (!biometricResult || !biometricResult.isMatch) {
       alert('Bloqueio Biométrico SST: O rosto capturado está divergente do cadastro biométrico. Assinatura bloqueada.');
       return;
     }
@@ -205,7 +224,9 @@ export const PublicSignaturePage: React.FC = () => {
         signerCpf: signerCpf || undefined,
         signerType: 'executante',
         signatureDataUrl,
-        photoDataUrl
+        photoDataUrl,
+        biometricType: biometricMethod,
+        biometricScore: biometricResult?.score || 100
       });
 
       setSuccess(true);

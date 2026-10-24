@@ -221,3 +221,33 @@ export function compressImage(
     img.src = dataUrl;
   });
 }
+
+// 5. Prova de Vida Inteligente (Anti-Spoofing / Liveness)
+// Compara frames consecutivos da câmera para detectar micro-movimentação natural e impedir fotos impressas ou estáticas
+export function verifyLiveness(
+  prevPixels: number[],
+  currPixels: number[]
+): { isLive: boolean; variation: number; reason?: string } {
+  if (prevPixels.length === 0 || currPixels.length === 0) {
+    return { isLive: true, variation: 1.0 };
+  }
+
+  let totalDiff = 0;
+  const len = Math.min(prevPixels.length, currPixels.length);
+  for (let i = 0; i < len; i++) {
+    totalDiff += Math.abs(prevPixels[i] - currPixels[i]);
+  }
+
+  const avgDiff = totalDiff / len;
+
+  // Se avgDiff for estritamente zero ou menor que 0.15, é uma foto 100% estática colocada na câmera (fraude)
+  if (avgDiff < 0.15) {
+    return {
+      isLive: false,
+      variation: avgDiff,
+      reason: 'Foto estática detectada (Spoofing). Por favor, posicione-se ao vivo em frente à câmera.'
+    };
+  }
+
+  return { isLive: true, variation: Math.round(avgDiff * 10) / 10 };
+}

@@ -97,6 +97,8 @@ export interface DigitalSignature {
   signerType: 'supervisor' | 'executante' | 'vigia' | 'encarregado';
   signatureDataUrl: string;
   photoDataUrl?: string;
+  biometricType?: 'face' | 'fingerprint';
+  biometricScore?: number;
   signedAt: string;
   signedByUserId?: string;
   deviceId?: string;

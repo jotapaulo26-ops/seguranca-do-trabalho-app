@@ -713,11 +713,16 @@ function renderSignaturesSection(
       : 'Aguardando validação do colaborador';
     pdf.text(timeInfo.substring(0, 60), x + 3, startY + 26.5);
 
-    if (matchingSig && matchingSig.photoDataUrl) {
+    if (matchingSig) {
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(5.5);
-      pdf.setTextColor(16, 149, 106); // Emerald
-      pdf.text('HOMOLOGADO COM BIOMETRIA FACIAL (FACE ID)', x + 3, startY + 30.5);
+      if (matchingSig.biometricType === 'fingerprint') {
+        pdf.setTextColor(79, 70, 229); // Indigo
+        pdf.text('HOMOLOGADO VIA DIGITAL DO APARELHO (CONTINGENCIA)', x + 3, startY + 30.5);
+      } else if (matchingSig.photoDataUrl) {
+        pdf.setTextColor(16, 149, 106); // Emerald
+        pdf.text('HOMOLOGADO COM BIOMETRIA FACIAL (FACE ID)', x + 3, startY + 30.5);
+      }
     }
   });
 }

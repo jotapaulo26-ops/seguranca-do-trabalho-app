@@ -847,11 +847,11 @@ documentRoutes.post('/', authenticateToken, requirePermission('documents', 'crea
 // Add or update digital signature of specific collaborator
 documentRoutes.post('/:id/sign', authenticateToken, (req: Request, res: Response) => {
   const { id } = req.params;
-  const { employeeId, signerName, signerRole, signerCpf, signatureDataUrl, photoDataUrl, signerType } = req.body;
+  const { employeeId, signerName, signerRole, signerCpf, signatureDataUrl, photoDataUrl, signerType, biometricType, biometricScore } = req.body;
 
   if (!signerName || !signatureDataUrl || !photoDataUrl) {
     return res.status(400).json({
-      error: 'Bloqueio de Segurança SST: Tanto a rubrica digital quanto a selfie de presença facial são estritamente obrigatórias para homologação.'
+      error: 'Bloqueio de Segurança SST: Tanto a rubrica digital quanto a validação biométrica são estritamente obrigatórias para homologação.'
     });
   }
 
@@ -870,6 +870,8 @@ documentRoutes.post('/:id/sign', authenticateToken, (req: Request, res: Response
     signerType: signerType || 'executante',
     signatureDataUrl,
     photoDataUrl: photoDataUrl || undefined,
+    biometricType: biometricType || 'face',
+    biometricScore: biometricScore || 100,
     signedAt: new Date().toISOString(),
     signedByUserId: req.user?.id,
     deviceId,
@@ -930,11 +932,11 @@ documentRoutes.post('/:id/sign', authenticateToken, (req: Request, res: Response
 // Public sign endpoint for QR code on smartphone (No Bearer token required)
 documentRoutes.post('/:id/sign-public', (req: Request, res: Response) => {
   const { id } = req.params;
-  const { employeeId, signerName, signerRole, signerCpf, signatureDataUrl, photoDataUrl, signerType } = req.body;
+  const { employeeId, signerName, signerRole, signerCpf, signatureDataUrl, photoDataUrl, signerType, biometricType, biometricScore } = req.body;
 
   if (!signerName || !signatureDataUrl || !photoDataUrl) {
     return res.status(400).json({
-      error: 'Bloqueio de Segurança SST: Tanto a rubrica digital quanto a selfie de presença facial são estritamente obrigatórias para homologação.'
+      error: 'Bloqueio de Segurança SST: Tanto a rubrica digital quanto a validação biométrica são estritamente obrigatórias para homologação.'
     });
   }
 
@@ -953,6 +955,8 @@ documentRoutes.post('/:id/sign-public', (req: Request, res: Response) => {
     signerType: signerType || 'executante',
     signatureDataUrl,
     photoDataUrl: photoDataUrl || undefined,
+    biometricType: biometricType || 'face',
+    biometricScore: biometricScore || 100,
     signedAt: new Date().toISOString(),
     deviceId,
     ipAddress: clientIp

@@ -19,13 +19,27 @@ import {
   MapPin,
   Flame,
   FileCheck,
-  Radio
+  Radio,
+  Cloud,
+  Fingerprint,
+  ShieldAlert
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Navigate } from 'react-router-dom';
 
 interface DataUsageResponse {
+  cloud: {
+    processedBytes: number;
+    processedFormatted: string;
+    quotaBytes: number;
+    quotaFormatted: string;
+    quotaUsedPercent: number;
+    syncStatus: string;
+    cloudProvider: string;
+    divergenceAlertsCount: number;
+    lastSyncTimestamp: string;
+  };
   storage: {
     dbSizeBytes: number;
     dbSizeFormatted: string;
@@ -182,7 +196,7 @@ export const DataUsagePage: React.FC = () => {
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-1">
-              Monitoramento em tempo real de armazenamento em disco, volume biométrico, tráfego e conformidade LGPD.
+              Monitoramento em tempo real de armazenamento em disco, nuvem, volume biométrico e conformidade LGPD.
             </p>
           </div>
         </div>
@@ -238,12 +252,59 @@ export const DataUsagePage: React.FC = () => {
       {loading && !data && (
         <div className="py-20 flex flex-col items-center justify-center gap-3 text-slate-400">
           <RefreshCw className="w-8 h-8 animate-spin text-indigo-500" />
-          <p className="text-xs font-semibold">Calculando métricas e telemetria de disco...</p>
+          <p className="text-xs font-semibold">Calculando métricas e telemetria de disco e nuvem...</p>
         </div>
       )}
 
       {data && (
         <>
+          {/* MARCADOR DE ARMAZENAMENTO E PROCESSAMENTO EM NUVEM */}
+          {data.cloud && (
+            <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-indigo-950 p-6 rounded-3xl border border-indigo-700/40 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center border border-indigo-400/30 shrink-0">
+                  <Cloud className="w-7 h-7 text-indigo-400 animate-pulse" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider">
+                      Arquivos Armazenados & Processados em Nuvem
+                    </span>
+                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-500/30 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                      {data.cloud.syncStatus}
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-2 mt-1">
+                    <span className="text-2xl md:text-3xl font-black text-white">{data.cloud.processedFormatted}</span>
+                    <span className="text-xs text-slate-400">processados de {data.cloud.quotaFormatted} alocados</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Provedor: <strong>{data.cloud.cloudProvider}</strong> • Sincronização contínua de fotos e relatórios
+                  </p>
+                </div>
+              </div>
+
+              {/* Medidor Visual de Cota Nuvem */}
+              <div className="w-full md:w-80 bg-white/5 p-4 rounded-2xl border border-white/10 flex flex-col gap-2">
+                <div className="flex justify-between text-xs font-bold">
+                  <span className="text-indigo-200">Capacidade da Nuvem</span>
+                  <span className="text-emerald-400">{data.cloud.quotaUsedPercent}%</span>
+                </div>
+                <div className="w-full h-3 bg-black/50 rounded-full overflow-hidden p-0.5 border border-white/10">
+                  <div
+                    className="h-full bg-gradient-to-r from-indigo-500 via-teal-400 to-emerald-400 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.max(2, Math.min(100, data.cloud.quotaUsedPercent))}%` }}
+                  />
+                </div>
+                <div className="flex justify-between items-center text-[10px] text-slate-400">
+                  <span>{(data.cloud.processedBytes / (1024 * 1024)).toFixed(1)} MB usados</span>
+                  <span>{(5000 - (data.cloud.processedBytes / (1024 * 1024))).toFixed(1)} MB livres</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Top 4 KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* 1. Armazenamento Total */}
@@ -358,7 +419,7 @@ export const DataUsagePage: React.FC = () => {
                   <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
                     <span className="text-[11px] text-slate-500 font-semibold block">Assinaturas Coletadas</span>
                     <span className="text-lg font-black text-slate-900">{data.counts.signatures}</span>
-                    <span className="text-[10px] text-indigo-600 font-bold block mt-0.5">100% com Face ID</span>
+                    <span className="text-[10px] text-indigo-600 font-bold block mt-0.5">100% com Face ID / Digital</span>
                   </div>
 
                   <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
@@ -425,8 +486,42 @@ export const DataUsagePage: React.FC = () => {
               </div>
             </div>
 
-            {/* Coluna 3: Governança LGPD & Segurança */}
+            {/* Coluna 3: Governança LGPD, Segurança & Antifraude */}
             <div className="space-y-6">
+              {/* Cartão de Alertas Antifraude */}
+              <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ShieldAlert className="w-5 h-5 text-amber-500" />
+                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">Segurança Antifraude</h3>
+                  </div>
+                  {data.cloud.divergenceAlertsCount > 0 ? (
+                    <span className="text-[10px] bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full border border-red-300">
+                      {data.cloud.divergenceAlertsCount} Alertas
+                    </span>
+                  ) : (
+                    <span className="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full">
+                      Protegido
+                    </span>
+                  )}
+                </div>
+
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 space-y-2 text-xs">
+                  <div className="flex items-center gap-2 text-emerald-700 font-bold">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Prova de Vida (Liveness) Ativa</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-indigo-700 font-bold">
+                    <Fingerprint className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <span>Contingência por Digital do Aparelho Ativa</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-700 font-medium">
+                    <MapPin className="w-4 h-4 text-slate-500 shrink-0" />
+                    <span>Auditoria de GPS em Tentativas Divergentes</span>
+                  </div>
+                </div>
+              </div>
+
               {/* Cartão LGPD */}
               <div className="bg-gradient-to-br from-slate-900 to-indigo-950 p-6 rounded-3xl border border-slate-800 text-white shadow-lg flex flex-col justify-between">
                 <div>

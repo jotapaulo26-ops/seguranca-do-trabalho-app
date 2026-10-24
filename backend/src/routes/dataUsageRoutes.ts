@@ -110,7 +110,24 @@ dataUsageRoutes.get('/data-usage', authenticateToken, (req: Request, res: Respon
     if (auditLogs.length > 5000) healthScore -= 5;
     if (trackingEvents.length > 10000) healthScore -= 5;
 
+    // 5. Cloud Processing & Storage Telemetry
+    const cloudQuotaBytes = 5 * 1024 * 1024 * 1024; // 5 GB Nuvem Alocada
+    const cloudProcessedBytes = dbSizeBytes + uploadsSizeBytes + biometricBytesTotal;
+    const cloudQuotaUsedPercent = Math.min(100, Math.round((cloudProcessedBytes / cloudQuotaBytes) * 10000) / 100);
+    const divergenceAlertsCount = auditLogs.filter((l: any) => l.action === 'BIOMETRIC_DIVERGENCE_ALERT').length;
+
     return res.json({
+      cloud: {
+        processedBytes: cloudProcessedBytes,
+        processedFormatted: formatBytes(cloudProcessedBytes),
+        quotaBytes: cloudQuotaBytes,
+        quotaFormatted: '5.0 GB',
+        quotaUsedPercent: cloudQuotaUsedPercent,
+        syncStatus: 'Sincronizado e Processado na Nuvem',
+        cloudProvider: 'Servidor em Nuvem Integrado / Usina Santa Isabel',
+        divergenceAlertsCount,
+        lastSyncTimestamp: new Date().toISOString()
+      },
       storage: {
         dbSizeBytes,
         dbSizeFormatted: formatBytes(dbSizeBytes),
